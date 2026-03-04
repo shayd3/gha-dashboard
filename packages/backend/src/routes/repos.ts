@@ -18,13 +18,22 @@ export const repoRoutes: FastifyPluginAsync = async (fastify) => {
       const cached = fastify.cache.get<Repository[]>(cacheKey);
       if (cached) return cached;
 
-      const { data } = await request.octokit.rest.repos.listForOrg({
-        org,
-        per_page: perPage,
-        page,
-        sort: "updated",
-        direction: "desc",
-      });
+      // If the "org" is the authenticated user, list their own repos instead
+      const isUser = org === request.session.login;
+      const { data } = isUser
+        ? await request.octokit.rest.repos.listForAuthenticatedUser({
+            per_page: perPage,
+            page,
+            sort: "updated",
+            direction: "desc",
+          })
+        : await request.octokit.rest.repos.listForOrg({
+            org,
+            per_page: perPage,
+            page,
+            sort: "updated",
+            direction: "desc",
+          });
 
       const repos: Repository[] = data.map((repo) => ({
         id: repo.id,

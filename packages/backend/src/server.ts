@@ -1,3 +1,10 @@
+import { config } from "dotenv";
+import { fileURLToPath } from "node:url";
+import { resolve, dirname } from "node:path";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+config({ path: resolve(__dirname, "../../../.env") });
+
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import cookie from "@fastify/cookie";

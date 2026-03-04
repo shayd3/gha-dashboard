@@ -21,7 +21,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
     const params = new URLSearchParams({
       client_id: GITHUB_CLIENT_ID(),
       scope: "repo read:org",
-      redirect_uri: `${_request.protocol}://${_request.hostname}/api/auth/callback`,
+      redirect_uri: `${FRONTEND_URL()}/api/auth/callback`,
     });
     reply.redirect(`${githubAuthUrl}?${params}`);
   });

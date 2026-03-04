@@ -43,9 +43,9 @@ function selectAllOrgRepos(orgLogin: string) {
 
 <template>
   <div class="org-repo-selector">
-    <h3 class="selector-title">Organizations</h3>
+    <h3 class="selector-title">Accounts</h3>
     <div v-if="!dashboard.orgs.length" class="empty-state">
-      Loading organizations...
+      Loading accounts...
     </div>
     <ul class="org-list">
       <li v-for="org in dashboard.orgs" :key="org.id" class="org-item">

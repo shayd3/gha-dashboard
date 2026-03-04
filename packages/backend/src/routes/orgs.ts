@@ -12,17 +12,28 @@ export const orgRoutes: FastifyPluginAsync = async (fastify) => {
     const cached = fastify.cache.get<Organization[]>(cacheKey);
     if (cached) return cached;
 
-    const { data } =
-      await request.octokit.rest.orgs.listForAuthenticatedUser({
-        per_page: 100,
-      });
+    // Fetch user info and orgs in parallel
+    const [{ data: user }, { data }] = await Promise.all([
+      request.octokit.rest.users.getAuthenticated(),
+      request.octokit.rest.orgs.listForAuthenticatedUser({ per_page: 100 }),
+    ]);
 
-    const orgs: Organization[] = data.map((org) => ({
-      id: org.id,
-      login: org.login,
-      avatarUrl: org.avatar_url,
-      description: org.description ?? null,
-    }));
+    const userEntry: Organization = {
+      id: user.id,
+      login: user.login,
+      avatarUrl: user.avatar_url,
+      description: "Your personal repositories",
+    };
+
+    const orgs: Organization[] = [
+      userEntry,
+      ...data.map((org) => ({
+        id: org.id,
+        login: org.login,
+        avatarUrl: org.avatar_url,
+        description: org.description ?? null,
+      })),
+    ];
 
     fastify.cache.set(cacheKey, orgs, CACHE_TTL);
     return orgs;
