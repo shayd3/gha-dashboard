@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import Card from "primevue/card";
+import Button from "primevue/button";
+
 function login() {
   window.location.href = "/api/auth/login";
 }
@@ -6,14 +9,30 @@ function login() {
 
 <template>
   <div class="login-page">
-    <div class="login-card">
-      <h1>GHA Dashboard</h1>
-      <p>Monitor GitHub Actions workflow statuses across your organizations.</p>
-      <button class="login-btn" @click="login">
-        <i class="pi pi-github" />
-        Sign in with GitHub
-      </button>
-    </div>
+    <Card class="login-card">
+      <template #header>
+        <div class="card-header-graphic">
+          <div class="logo-icon">
+            <i class="pi pi-github" />
+          </div>
+        </div>
+      </template>
+      <template #title>
+        <span class="card-title">GHA Dashboard</span>
+      </template>
+      <template #subtitle>
+        <span class="card-subtitle">Monitor GitHub Actions workflow statuses across your organizations.</span>
+      </template>
+      <template #footer>
+        <Button
+          label="Sign in with GitHub"
+          icon="pi pi-github"
+          size="large"
+          class="w-full login-btn"
+          @click="login"
+        />
+      </template>
+    </Card>
   </div>
 </template>
 
@@ -23,45 +42,45 @@ function login() {
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  background: linear-gradient(135deg, #0d1117 0%, #161b22 100%);
+  background: radial-gradient(ellipse at 60% 0%, rgba(99, 102, 241, 0.15) 0%, transparent 60%),
+    var(--p-surface-950);
 }
 
 .login-card {
+  width: 380px;
   text-align: center;
-  background: #fff;
-  padding: 3rem;
-  border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
-  max-width: 420px;
 }
 
-.login-card h1 {
-  font-size: 1.75rem;
-  margin-bottom: 0.75rem;
-  color: #1a1a2e;
+.card-header-graphic {
+  display: flex;
+  justify-content: center;
+  padding: 2rem 2rem 0;
 }
 
-.login-card p {
-  color: #666;
-  margin-bottom: 2rem;
+.logo-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  background: var(--p-primary-500);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  color: #fff;
+}
+
+.card-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.card-subtitle {
+  font-size: 0.9rem;
   line-height: 1.5;
 }
 
 .login-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1.5rem;
-  background: #24292e;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.login-btn:hover {
-  background: #1a1e22;
+  width: 100%;
+  justify-content: center;
 }
 </style>

@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { useDashboardStore } from "../stores/dashboard.js";
+import Checkbox from "primevue/checkbox";
+import Badge from "primevue/badge";
 
 const dashboard = useDashboardStore();
 const expandedOrgs = ref<Set<string>>(new Set());
@@ -39,32 +41,70 @@ function selectAllOrgRepos(orgLogin: string) {
     });
   }
 }
+
+function isAllOrgSelected(orgLogin: string) {
+  const repos = dashboard.reposByOrg[orgLogin] || [];
+  return repos.length > 0 && repos.every((r) => dashboard.selectedRepos.includes(r.fullName));
+}
+
+function isSomeOrgSelected(orgLogin: string) {
+  const repos = dashboard.reposByOrg[orgLogin] || [];
+  return repos.some((r) => dashboard.selectedRepos.includes(r.fullName)) && !isAllOrgSelected(orgLogin);
+}
 </script>
 
 <template>
   <div class="org-repo-selector">
-    <h3 class="selector-title">Accounts</h3>
-    <div v-if="!dashboard.orgs.length" class="empty-state">
-      Loading accounts...
+    <div class="selector-header">
+      <span class="selector-title">ACCOUNTS</span>
+      <Badge
+        v-if="dashboard.selectedRepos.length"
+        :value="dashboard.selectedRepos.length"
+        severity="primary"
+      />
     </div>
+
+    <div v-if="!dashboard.orgs.length" class="loading-state">
+      <i class="pi pi-spin pi-spinner" style="font-size: 1rem" />
+      <span>Loading accounts...</span>
+    </div>
+
     <ul class="org-list">
       <li v-for="org in dashboard.orgs" :key="org.id" class="org-item">
-        <div class="org-header" @click="toggleOrg(org.login)">
+        <div
+          class="org-header"
+          @click="toggleOrg(org.login)"
+          :class="{ expanded: expandedOrgs.has(org.login) }"
+        >
           <i
-            class="pi"
-            :class="
-              expandedOrgs.has(org.login) ? 'pi-chevron-down' : 'pi-chevron-right'
-            "
+            class="pi toggle-icon"
+            :class="expandedOrgs.has(org.login) ? 'pi-chevron-down' : 'pi-chevron-right'"
           />
           <img :src="org.avatarUrl" :alt="org.login" class="org-avatar" />
           <span class="org-name">{{ org.login }}</span>
         </div>
+
         <div v-if="expandedOrgs.has(org.login)" class="repo-list-wrapper">
-          <div class="select-all" @click="selectAllOrgRepos(org.login)">
-            <i class="pi pi-check-square" />
-            <span>Toggle all</span>
+          <!-- Toggle All -->
+          <div
+            class="toggle-all-row"
+            @click="selectAllOrgRepos(org.login)"
+          >
+            <Checkbox
+              :modelValue="isAllOrgSelected(org.login)"
+              :indeterminate="isSomeOrgSelected(org.login)"
+              binary
+              @click.stop
+              @change="selectAllOrgRepos(org.login)"
+            />
+            <span class="toggle-all-label">Toggle all</span>
           </div>
-          <ul v-if="dashboard.reposByOrg[org.login]" class="repo-list">
+
+          <div v-if="!dashboard.reposByOrg[org.login]" class="loading-repos">
+            <i class="pi pi-spin pi-spinner" style="font-size: 0.75rem" />
+            Loading...
+          </div>
+          <ul v-else class="repo-list">
             <li
               v-for="repo in dashboard.reposByOrg[org.login]"
               :key="repo.id"
@@ -72,135 +112,176 @@ function selectAllOrgRepos(orgLogin: string) {
               :class="{ selected: isRepoSelected(repo.fullName) }"
               @click="dashboard.toggleRepo(repo.fullName)"
             >
-              <input
-                type="checkbox"
-                :checked="isRepoSelected(repo.fullName)"
+              <Checkbox
+                :modelValue="isRepoSelected(repo.fullName)"
+                binary
                 @click.stop
                 @change="dashboard.toggleRepo(repo.fullName)"
               />
               <span class="repo-name">{{ repo.name }}</span>
-              <i v-if="repo.private" class="pi pi-lock" style="font-size: 0.7rem; color: #9ca3af" />
+              <i
+                v-if="repo.private"
+                class="pi pi-lock repo-lock"
+              />
             </li>
           </ul>
-          <div v-else class="loading-repos">Loading repos...</div>
         </div>
       </li>
     </ul>
-    <div v-if="dashboard.selectedRepos.length" class="selection-summary">
-      {{ dashboard.selectedRepos.length }} repo(s) selected
-    </div>
   </div>
 </template>
 
 <style scoped>
 .org-repo-selector {
-  font-size: 0.875rem;
+  font-size: 0.85rem;
+}
+
+.selector-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.875rem;
+  padding: 0 0.25rem;
 }
 
 .selector-title {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--p-text-muted-color);
+}
+
+.loading-state {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.25rem;
+  color: var(--p-text-muted-color);
   font-size: 0.8rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #64748b;
-  margin-bottom: 0.75rem;
 }
 
 .org-list {
   list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .org-item {
-  margin-bottom: 0.25rem;
+  border-radius: 6px;
+  overflow: hidden;
 }
 
 .org-header {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.375rem 0.25rem;
+  padding: 0.425rem 0.5rem;
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: 6px;
+  transition: background 0.15s;
+  color: var(--p-text-color);
 }
 
 .org-header:hover {
-  background: #f1f5f9;
+  background: var(--p-surface-700);
+}
+
+.toggle-icon {
+  font-size: 0.65rem;
+  color: var(--p-text-muted-color);
+  width: 10px;
+  flex-shrink: 0;
 }
 
 .org-avatar {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   border-radius: 4px;
+  flex-shrink: 0;
 }
 
 .org-name {
   font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .repo-list-wrapper {
-  margin-left: 1.5rem;
+  margin-left: 1.25rem;
+  margin-top: 2px;
+  margin-bottom: 4px;
+  border-left: 1px solid var(--p-surface-700);
+  padding-left: 0.625rem;
 }
 
-.select-all {
+.toggle-all-row {
   display: flex;
   align-items: center;
-  gap: 0.375rem;
-  padding: 0.25rem;
+  gap: 0.5rem;
+  padding: 0.3rem 0.25rem;
   cursor: pointer;
-  color: #3b82f6;
-  font-size: 0.8rem;
+  border-radius: 4px;
 }
 
-.select-all:hover {
-  text-decoration: underline;
+.toggle-all-row:hover {
+  background: var(--p-surface-700);
+}
+
+.toggle-all-label {
+  font-size: 0.775rem;
+  color: var(--p-primary-400);
+  font-weight: 500;
 }
 
 .repo-list {
   list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin-top: 2px;
 }
 
 .repo-item {
   display: flex;
   align-items: center;
-  gap: 0.375rem;
-  padding: 0.25rem;
+  gap: 0.5rem;
+  padding: 0.3rem 0.25rem;
   cursor: pointer;
   border-radius: 4px;
+  transition: background 0.15s;
+  color: var(--p-text-color);
 }
 
 .repo-item:hover {
-  background: #f1f5f9;
+  background: var(--p-surface-700);
 }
 
 .repo-item.selected {
-  background: #eff6ff;
-}
-
-.repo-item input[type="checkbox"] {
-  cursor: pointer;
+  background: color-mix(in srgb, var(--p-primary-500) 12%, transparent);
 }
 
 .repo-name {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  flex: 1;
+  font-size: 0.8rem;
+}
+
+.repo-lock {
+  font-size: 0.65rem;
+  color: var(--p-text-muted-color);
+  flex-shrink: 0;
 }
 
 .loading-repos {
-  padding: 0.5rem;
-  color: #94a3b8;
-  font-size: 0.8rem;
-}
-
-.selection-summary {
-  margin-top: 0.75rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid #e2e8f0;
-  font-size: 0.8rem;
-  color: #64748b;
-}
-
-.empty-state {
-  color: #94a3b8;
-  padding: 0.5rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 0.25rem;
+  color: var(--p-text-muted-color);
+  font-size: 0.775rem;
 }
 </style>

@@ -5,6 +5,10 @@ import { usePolling } from "../composables/usePolling.js";
 import AppHeader from "../components/AppHeader.vue";
 import OrgRepoSelector from "../components/OrgRepoSelector.vue";
 import WorkflowRunsTable from "../components/WorkflowRunsTable.vue";
+import InputText from "primevue/inputtext";
+import MultiSelect from "primevue/multiselect";
+import Select from "primevue/select";
+import Button from "primevue/button";
 
 const dashboard = useDashboardStore();
 const refreshInterval = ref(dashboard.refreshInterval);
@@ -40,6 +44,23 @@ const refreshOptions = [
   { label: "60s", value: 60 },
   { label: "5m", value: 300 },
 ];
+
+const statusOptions = [
+  { label: "Success", value: "success" },
+  { label: "Failure", value: "failure" },
+  { label: "Cancelled", value: "cancelled" },
+  { label: "Skipped", value: "skipped" },
+  { label: "Timed Out", value: "timed_out" },
+];
+
+const eventOptions = ref<{ label: string; value: string }[]>([]);
+watch(
+  () => dashboard.uniqueEvents,
+  (events) => {
+    eventOptions.value = events.map((e) => ({ label: e, value: e }));
+  },
+  { immediate: true }
+);
 </script>
 
 <template>
@@ -50,71 +71,72 @@ const refreshOptions = [
         <OrgRepoSelector />
       </aside>
       <main class="main-content">
-        <div class="toolbar">
-          <div class="filters">
-            <select
+        <!-- Toolbar -->
+        <div class="toolbar-card">
+          <div class="filters-row">
+            <MultiSelect
               v-model="dashboard.filters.status"
-              multiple
-              class="filter-select"
-            >
-              <option value="success">Success</option>
-              <option value="failure">Failure</option>
-              <option value="cancelled">Cancelled</option>
-              <option :value="null">In Progress</option>
-            </select>
-            <input
+              :options="statusOptions"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="All statuses"
+              :maxSelectedLabels="2"
+              class="filter-multiselect"
+              display="chip"
+            />
+            <InputText
               v-model="dashboard.filters.branch"
-              type="text"
               placeholder="Filter branch..."
               class="filter-input"
+              size="small"
             />
-            <input
+            <InputText
               v-model="dashboard.filters.workflow"
-              type="text"
               placeholder="Filter workflow..."
               class="filter-input"
+              size="small"
             />
-            <select v-model="dashboard.filters.event" class="filter-select">
-              <option :value="null">All events</option>
-              <option
-                v-for="event in dashboard.uniqueEvents"
-                :key="event"
-                :value="event"
-              >
-                {{ event }}
-              </option>
-            </select>
+            <Select
+              v-model="dashboard.filters.event"
+              :options="eventOptions"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="All events"
+              showClear
+              class="filter-select"
+            />
           </div>
-          <div class="refresh-controls">
-            <select v-model.number="refreshInterval" class="refresh-select">
-              <option
-                v-for="opt in refreshOptions"
-                :key="opt.value"
-                :value="opt.value"
-              >
-                {{ opt.label }}
-              </option>
-            </select>
-            <button
-              class="refresh-btn"
-              :disabled="dashboard.loading"
+          <div class="refresh-row">
+            <Select
+              v-model="refreshInterval"
+              :options="refreshOptions"
+              optionLabel="label"
+              optionValue="value"
+              class="refresh-select"
+            />
+            <Button
+              :icon="`pi pi-refresh${dashboard.loading ? ' pi-spin' : ''}`"
+              label="Refresh"
+              severity="primary"
+              :loading="dashboard.loading"
               @click="refreshNow"
-            >
-              <i class="pi pi-refresh" :class="{ 'pi-spin': dashboard.loading }" />
-              Refresh
-            </button>
+            />
           </div>
         </div>
+
         <WorkflowRunsTable />
       </main>
     </div>
+
+    <!-- Footer -->
     <footer class="dashboard-footer">
-      <span v-if="dashboard.lastUpdated">
-        Last updated: {{ new Date(dashboard.lastUpdated).toLocaleTimeString() }}
+      <span v-if="dashboard.lastUpdated" class="footer-text">
+        <i class="pi pi-clock" style="font-size: 0.75rem" />
+        Updated {{ new Date(dashboard.lastUpdated).toLocaleTimeString() }}
       </span>
       <span v-if="isPolling" class="polling-indicator">
-        <i class="pi pi-circle-fill" style="color: #22c55e; font-size: 0.5rem" />
-        Auto-refresh active
+        <span class="pulse-dot" />
+        Auto-refreshing
       </span>
     </footer>
   </div>
@@ -125,111 +147,112 @@ const refreshOptions = [
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  background: var(--p-surface-950);
 }
 
 .dashboard-body {
   display: flex;
   flex: 1;
-  gap: 0;
+  overflow: hidden;
 }
 
 .sidebar {
-  width: 280px;
-  min-width: 280px;
-  background: #fff;
-  border-right: 1px solid #e2e8f0;
-  padding: 1rem;
+  width: 260px;
+  min-width: 260px;
+  background: var(--p-surface-900);
+  border-right: 1px solid var(--p-surface-700);
+  padding: 1rem 0.75rem;
   overflow-y: auto;
-  max-height: calc(100vh - 120px);
+  height: calc(100vh - 56px - 36px);
 }
 
 .main-content {
   flex: 1;
-  padding: 1rem;
+  padding: 1rem 1.25rem;
   overflow-x: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
-.toolbar {
+/* Toolbar */
+.toolbar-card {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
   flex-wrap: wrap;
   gap: 0.75rem;
-  margin-bottom: 1rem;
-  padding: 0.75rem;
-  background: #fff;
-  border-radius: 8px;
-  border: 1px solid #e2e8f0;
+  padding: 0.625rem 1rem;
+  background: var(--p-surface-800);
+  border: 1px solid var(--p-surface-700);
+  border-radius: 10px;
 }
 
-.filters {
+.filters-row {
   display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
   align-items: center;
 }
 
-.filter-input,
-.filter-select {
-  padding: 0.375rem 0.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 0.875rem;
+.refresh-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
 }
 
 .filter-input {
-  width: 160px;
+  width: 150px;
 }
 
-.refresh-controls {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
+.filter-select {
+  width: 145px;
+}
+
+.filter-multiselect {
+  width: 175px;
 }
 
 .refresh-select {
-  padding: 0.375rem 0.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 0.875rem;
+  width: 110px;
 }
 
-.refresh-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-  padding: 0.375rem 0.75rem;
-  background: #3b82f6;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  font-size: 0.875rem;
-  cursor: pointer;
-}
-
-.refresh-btn:hover {
-  background: #2563eb;
-}
-
-.refresh-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
+/* Footer */
 .dashboard-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.5rem 1rem;
-  background: #fff;
-  border-top: 1px solid #e2e8f0;
-  font-size: 0.8rem;
-  color: #64748b;
+  padding: 0 1.25rem;
+  height: 36px;
+  background: var(--p-surface-900);
+  border-top: 1px solid var(--p-surface-700);
+  font-size: 0.75rem;
+  color: var(--p-text-muted-color);
+  flex-shrink: 0;
+}
+
+.footer-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
 }
 
 .polling-indicator {
   display: inline-flex;
   align-items: center;
-  gap: 0.375rem;
+  gap: 0.5rem;
+}
+
+.pulse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--p-green-500);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
+  50% { opacity: 0.7; box-shadow: 0 0 0 4px rgba(34, 197, 94, 0); }
 }
 </style>

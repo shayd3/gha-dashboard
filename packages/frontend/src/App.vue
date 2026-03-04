@@ -3,7 +3,9 @@ import { RouterView } from "vue-router";
 </script>
 
 <template>
-  <RouterView />
+  <div class="p-dark app-root">
+    <RouterView />
+  </div>
 </template>
 
 <style>
@@ -16,17 +18,23 @@ import { RouterView } from "vue-router";
 }
 
 body {
-  font-family:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
-    Arial, sans-serif;
-  background: #f8f9fa;
-  color: #1a1a2e;
+  font-family: "Onest", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: var(--p-surface-950);
+  color: var(--p-text-color);
   min-height: 100vh;
 }
 
-#app {
+.app-root {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  background: var(--p-surface-950);
+}
+
+.p-tooltip .p-tooltip-text {
+  white-space: nowrap;
 }
 </style>

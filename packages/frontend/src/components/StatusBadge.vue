@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue";
+import Tag from "primevue/tag";
 import type { WorkflowRunStatus, WorkflowRunConclusion } from "@gha-dashboard/shared";
 
 const props = defineProps<{
@@ -7,92 +8,35 @@ const props = defineProps<{
   conclusion: WorkflowRunConclusion;
 }>();
 
-const display = computed(() => {
+type TagSeverity = "success" | "info" | "warn" | "danger" | "secondary" | "contrast";
+
+const display = computed<{ label: string; severity: TagSeverity; icon: string }>(() => {
   if (props.status === "completed" && props.conclusion) {
-    return conclusionConfig[props.conclusion] ?? { label: props.conclusion, cls: "neutral" };
+    return conclusionConfig[props.conclusion] ?? { label: props.conclusion, severity: "secondary", icon: "pi-minus" };
   }
-  return statusConfig[props.status] ?? { label: props.status, cls: "neutral" };
+  return statusConfig[props.status] ?? { label: props.status, severity: "secondary", icon: "pi-minus" };
 });
 
-const conclusionConfig: Record<string, { label: string; cls: string }> = {
-  success: { label: "Success", cls: "success" },
-  failure: { label: "Failure", cls: "failure" },
-  cancelled: { label: "Cancelled", cls: "cancelled" },
-  skipped: { label: "Skipped", cls: "skipped" },
-  timed_out: { label: "Timed Out", cls: "failure" },
-  action_required: { label: "Action Required", cls: "warning" },
-  neutral: { label: "Neutral", cls: "neutral" },
-  stale: { label: "Stale", cls: "neutral" },
+const conclusionConfig: Record<string, { label: string; severity: TagSeverity; icon: string }> = {
+  success: { label: "Success", severity: "success", icon: "pi-check" },
+  failure: { label: "Failure", severity: "danger", icon: "pi-times" },
+  cancelled: { label: "Cancelled", severity: "secondary", icon: "pi-ban" },
+  skipped: { label: "Skipped", severity: "secondary", icon: "pi-forward" },
+  timed_out: { label: "Timed Out", severity: "danger", icon: "pi-clock" },
+  action_required: { label: "Action Required", severity: "warn", icon: "pi-exclamation-triangle" },
+  neutral: { label: "Neutral", severity: "secondary", icon: "pi-minus" },
+  stale: { label: "Stale", severity: "secondary", icon: "pi-minus" },
 };
 
-const statusConfig: Record<string, { label: string; cls: string }> = {
-  queued: { label: "Queued", cls: "queued" },
-  in_progress: { label: "In Progress", cls: "in-progress" },
-  waiting: { label: "Waiting", cls: "queued" },
-  pending: { label: "Pending", cls: "queued" },
-  requested: { label: "Requested", cls: "queued" },
+const statusConfig: Record<string, { label: string; severity: TagSeverity; icon: string }> = {
+  queued: { label: "Queued", severity: "warn", icon: "pi-clock" },
+  in_progress: { label: "In Progress", severity: "info", icon: "pi-spin pi-spinner" },
+  waiting: { label: "Waiting", severity: "warn", icon: "pi-hourglass" },
+  pending: { label: "Pending", severity: "warn", icon: "pi-hourglass" },
+  requested: { label: "Requested", severity: "warn", icon: "pi-hourglass" },
 };
 </script>
 
 <template>
-  <span class="badge" :class="display.cls">
-    {{ display.label }}
-  </span>
+  <Tag :severity="display.severity" :value="display.label" :icon="`pi ${display.icon}`" />
 </template>
-
-<style scoped>
-.badge {
-  display: inline-block;
-  padding: 0.175rem 0.5rem;
-  border-radius: 9999px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.success {
-  background: #dcfce7;
-  color: #166534;
-}
-
-.failure {
-  background: #fee2e2;
-  color: #991b1b;
-}
-
-.cancelled {
-  background: #f3f4f6;
-  color: #4b5563;
-}
-
-.skipped {
-  background: #f3f4f6;
-  color: #6b7280;
-}
-
-.warning {
-  background: #fef9c3;
-  color: #854d0e;
-}
-
-.neutral {
-  background: #e5e7eb;
-  color: #374151;
-}
-
-.queued {
-  background: #fef3c7;
-  color: #92400e;
-}
-
-.in-progress {
-  background: #dbeafe;
-  color: #1e40af;
-  animation: pulse 2s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
-}
-</style>

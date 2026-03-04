@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { useAuthStore } from "../stores/auth.js";
 import { useRouter } from "vue-router";
+import Avatar from "primevue/avatar";
+import Button from "primevue/button";
 
 const auth = useAuthStore();
 const router = useRouter();
@@ -13,19 +15,25 @@ async function logout() {
 
 <template>
   <header class="app-header">
-    <div class="header-left">
-      <h1 class="logo">GHA Dashboard</h1>
+    <div class="header-brand">
+      <i class="pi pi-github" style="font-size: 1.35rem; color: var(--p-primary-400)" />
+      <span class="brand-text">GHA Dashboard</span>
     </div>
-    <div class="header-right" v-if="auth.user">
-      <img
-        :src="auth.user.avatarUrl"
-        :alt="auth.user.login"
-        class="avatar"
+    <div class="header-user" v-if="auth.user">
+      <Avatar
+        :image="auth.user.avatarUrl"
+        shape="circle"
+        size="normal"
       />
       <span class="username">{{ auth.user.login }}</span>
-      <button class="logout-btn" @click="logout">
-        <i class="pi pi-sign-out" />
-      </button>
+      <Button
+        icon="pi pi-sign-out"
+        severity="secondary"
+        text
+        rounded
+        @click="logout"
+        v-tooltip.bottom="'Sign out'"
+      />
     </div>
   </header>
 </template>
@@ -35,42 +43,34 @@ async function logout() {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.75rem 1.25rem;
-  background: #0d1117;
-  color: #fff;
+  padding: 0 1.5rem;
+  height: 56px;
+  background: var(--p-surface-800);
+  border-bottom: 1px solid var(--p-surface-700);
+  flex-shrink: 0;
 }
 
-.logo {
-  font-size: 1.125rem;
-  font-weight: 600;
-}
-
-.header-right {
+.header-brand {
   display: flex;
   align-items: center;
   gap: 0.625rem;
 }
 
-.avatar {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
+.brand-text {
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--p-text-color);
+}
+
+.header-user {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
 }
 
 .username {
   font-size: 0.875rem;
-}
-
-.logout-btn {
-  background: none;
-  border: none;
-  color: #8b949e;
-  cursor: pointer;
-  padding: 0.25rem;
-  font-size: 1rem;
-}
-
-.logout-btn:hover {
-  color: #fff;
+  color: var(--p-text-muted-color);
 }
 </style>
