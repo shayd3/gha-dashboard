@@ -1,0 +1,47 @@
+frontend:
+  replicaCount: 2
+  image:
+    repository: gha-dashboard-frontend
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    port: 80
+  resources:
+    limits:
+      cpu: 100m
+      memory: 128Mi
+    requests:
+      cpu: 50m
+      memory: 64Mi
+
+backend:
+  replicaCount: 2
+  image:
+    repository: gha-dashboard-backend
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    port: 3000
+  resources:
+    limits:
+      cpu: 500m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+ingress:
+  enabled: true
+  className: nginx
+  host: gha-dashboard.example.com
+  tls:
+    enabled: false
+    secretName: gha-dashboard-tls
+
+github:
+  clientId: ""
+  clientSecret: ""
+  apiUrl: "https://api.github.com"
+
+jwt:
+  secret: ""

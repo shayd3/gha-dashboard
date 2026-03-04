@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-config
+  labels:
+    app.kubernetes.io/name: {{ .Chart.Name }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+data:
+  GITHUB_API_URL: {{ .Values.github.apiUrl | quote }}
+  NODE_ENV: "production"
+  PORT: {{ .Values.backend.service.port | quote }}
+  {{- if .Values.ingress.tls.enabled }}
+  FRONTEND_URL: "https://{{ .Values.ingress.host }}"
+  CORS_ORIGIN: "https://{{ .Values.ingress.host }}"
+  {{- else }}
+  FRONTEND_URL: "http://{{ .Values.ingress.host }}"
+  CORS_ORIGIN: "http://{{ .Values.ingress.host }}"
+  {{- end }}
