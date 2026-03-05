@@ -20,8 +20,13 @@ export const useAuthStore = defineStore("auth", () => {
   }
 
   async function logout() {
-    await apiFetch("/api/auth/logout", { method: "POST" });
-    user.value = null;
+    try {
+      await apiFetch("/api/auth/logout", { method: "POST" });
+    } catch {
+      // Clear local state regardless of API errors
+    } finally {
+      $reset();
+    }
   }
 
   function $reset() {
