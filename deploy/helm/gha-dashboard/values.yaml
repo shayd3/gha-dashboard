@@ -45,3 +45,9 @@ github:
 
 jwt:
   secret: ""
+
+database:
+  # Full PostgreSQL connection string — set this for production
+  # e.g. postgresql://user:pass@host:5432/gha_dashboard
+  # If left empty, the backend falls back to in-memory storage (views not persisted).
+  url: ""

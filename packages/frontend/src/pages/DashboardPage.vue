@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from "vue";
 import { useDashboardStore } from "../stores/dashboard.js";
+import { useViewsStore } from "../stores/views.js";
 import { usePolling } from "../composables/usePolling.js";
 import AppHeader from "../components/AppHeader.vue";
 import OrgRepoSelector from "../components/OrgRepoSelector.vue";
@@ -12,6 +13,7 @@ import Button from "primevue/button";
 import Popover from "primevue/popover";
 
 const dashboard = useDashboardStore();
+const views = useViewsStore();
 const refreshInterval = ref(dashboard.refreshInterval);
 
 watch(refreshInterval, (val) => {
@@ -50,6 +52,11 @@ function fmtTime(d: Date) {
 
 onMounted(async () => {
   await dashboard.fetchOrgs();
+  // Fetch views; if one was active in a previous session, re-apply it
+  await views.fetchViews().catch(() => {}); // non-fatal if not authenticated yet
+  if (views.activeViewId) {
+    views.activateView(views.activeViewId);
+  }
   if (dashboard.selectedRepos.length) {
     await dashboard.fetchRuns();
   }

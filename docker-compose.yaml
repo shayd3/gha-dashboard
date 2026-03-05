@@ -1,4 +1,18 @@
 services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: gha
+      POSTGRES_PASSWORD: gha
+      POSTGRES_DB: gha_dashboard
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gha"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   backend:
     build:
       context: .
@@ -10,6 +24,10 @@ services:
     environment:
       - NODE_ENV=production
       - FRONTEND_URL=http://localhost
+      - DATABASE_URL=postgresql://gha:gha@db:5432/gha_dashboard
+    depends_on:
+      db:
+        condition: service_healthy
 
   frontend:
     build:
@@ -19,3 +37,6 @@ services:
       - "80:80"
     depends_on:
       - backend
+
+volumes:
+  pgdata:

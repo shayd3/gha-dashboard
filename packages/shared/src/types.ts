@@ -96,3 +96,27 @@ export interface DashboardFilters {
   workflow: string | null;
   event: string | null;
 }
+
+export interface View {
+  id: string;
+  userId: number;
+  name: string;
+  repos: string[];
+  filters: DashboardFilters | null;
+  position: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateViewInput {
+  name: string;
+  repos: string[];
+  filters?: DashboardFilters;
+}
+
+export interface UpdateViewInput {
+  name?: string;
+  repos?: string[];
+  filters?: DashboardFilters;
+  position?: number;
+}
