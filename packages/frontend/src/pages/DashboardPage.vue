@@ -179,7 +179,7 @@ watch(
         </button>
 
         <!-- Moon / sleep menu -->
-        <button class="sleep-menu-btn" @click="toggleSleepMenu" v-tooltip.top="'Sleep options'">
+        <button class="sleep-menu-btn" @click="toggleSleepMenu" aria-label="Sleep options" v-tooltip.top="'Sleep options'">
           <i class="pi pi-moon" />
         </button>
 
