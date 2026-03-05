@@ -101,8 +101,12 @@ async function handleSaveAndSwitch() {
         class="delete-confirm"
       >
         <span>Delete "{{ view.name }}"?</span>
-        <button class="btn-danger-sm" @click="confirmDelete(view.id)">Yes</button>
-        <button class="btn-ghost-sm" @click="confirmDeleteId = null">No</button>
+        <button class="icon-btn-confirm danger" @click="confirmDelete(view.id)" title="Confirm delete">
+          <i class="pi pi-check" />
+        </button>
+        <button class="icon-btn-confirm" @click="confirmDeleteId = null" title="Cancel">
+          <i class="pi pi-times" />
+        </button>
       </div>
 
       <div
@@ -306,6 +310,29 @@ async function handleSaveAndSwitch() {
   padding: 0.3rem 0.5rem;
   font-size: 0.8rem;
   color: var(--p-text-color);
+}
+
+.icon-btn-confirm {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--p-text-muted-color);
+  cursor: pointer;
+  padding: 0.2rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  transition: color 0.15s, background 0.15s;
+}
+
+.icon-btn-confirm:hover {
+  background: var(--p-surface-600);
+  color: var(--p-text-color);
+}
+
+.icon-btn-confirm.danger:hover {
+  color: var(--p-red-400);
 }
 
 .rename-input,
