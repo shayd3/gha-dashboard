@@ -7,21 +7,26 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "@gha-dashboard/shared": "workspace:*",
     "@fastify/cookie": "^11.0.2",
     "@fastify/cors": "^10.0.2",
+    "@gha-dashboard/shared": "workspace:*",
+    "dotenv": "^16.4.7",
     "fastify": "^5.2.1",
     "fastify-plugin": "^5.0.1",
-    "dotenv": "^16.4.7",
     "jose": "^6.0.11",
     "octokit": "^4.1.2"
   },
   "devDependencies": {
+    "@types/node": "^22.13.5",
+    "@vitest/coverage-v8": "^4.0.18",
     "tsx": "^4.19.3",
     "typescript": "^5.7.3",
-    "@types/node": "^22.13.5"
+    "vitest": "^4.0.18"
   }
 }
