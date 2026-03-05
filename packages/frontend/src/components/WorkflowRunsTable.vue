@@ -33,6 +33,12 @@ function timeAgo(iso: string): string {
   return `${days}d ago`;
 }
 
+const BRANCH_TRUNCATE_THRESHOLD = 18;
+
+function getBranchTooltip(run: WorkflowRun): string | undefined {
+  return run.headBranch.length > BRANCH_TRUNCATE_THRESHOLD ? run.headBranch : undefined;
+}
+
 const rows = computed(() => dashboard.filteredRuns);
 </script>
 
@@ -95,7 +101,10 @@ const rows = computed(() => dashboard.filteredRuns);
         <template #body="{ data }">
           <span
             class="branch-chip"
-            v-tooltip.top="(data as WorkflowRun).headBranch.length > 18 ? (data as WorkflowRun).headBranch : undefined"
+            tabindex="0"
+            :aria-label="(data as WorkflowRun).headBranch"
+            :title="getBranchTooltip(data as WorkflowRun)"
+            v-tooltip.top="getBranchTooltip(data as WorkflowRun)"
           >{{ (data as WorkflowRun).headBranch }}</span>
         </template>
       </Column>
