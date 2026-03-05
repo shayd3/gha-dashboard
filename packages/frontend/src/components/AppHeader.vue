@@ -8,8 +8,11 @@ const auth = useAuthStore();
 const router = useRouter();
 
 async function logout() {
-  await auth.logout();
-  router.push({ name: "login" });
+  try {
+    await auth.logout();
+  } finally {
+    router.push({ name: "login" });
+  }
 }
 </script>
 
