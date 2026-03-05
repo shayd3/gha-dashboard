@@ -93,10 +93,10 @@ const rows = computed(() => dashboard.filteredRuns);
 
       <Column field="headBranch" header="Branch" sortable style="width: 12%">
         <template #body="{ data }">
-          <span class="branch-chip">
-            <i class="pi pi-code-branch" style="font-size: 0.65rem" />
-            {{ (data as WorkflowRun).headBranch }}
-          </span>
+          <span
+            class="branch-chip"
+            v-tooltip.top="(data as WorkflowRun).headBranch.length > 18 ? (data as WorkflowRun).headBranch : undefined"
+          >{{ (data as WorkflowRun).headBranch }}</span>
         </template>
       </Column>
 
@@ -239,14 +239,14 @@ const rows = computed(() => dashboard.filteredRuns);
 .branch-chip {
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
   font-size: 0.78rem;
   font-family: ui-monospace, monospace;
   background: var(--p-surface-700);
   padding: 0.15rem 0.45rem;
   border-radius: 4px;
   color: var(--p-text-color);
-  max-width: 140px;
+  width: fit-content;
+  max-width: 180px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -319,5 +319,70 @@ const rows = computed(() => dashboard.filteredRuns);
 :deep(.p-datatable-paginator-bottom) {
   background: var(--p-surface-900);
   border-top: 1px solid var(--p-surface-700);
+  color: var(--p-text-muted-color);
+  font-size: 0.8rem;
+}
+
+/* Paginator internals */
+:deep(.p-paginator) {
+  background: transparent;
+  padding: 0.4rem 0.75rem;
+  gap: 0.2rem;
+}
+
+:deep(.p-paginator-content) {
+  gap: 0.2rem;
+}
+
+:deep(.p-paginator-page),
+:deep(.p-paginator-first),
+:deep(.p-paginator-prev),
+:deep(.p-paginator-next),
+:deep(.p-paginator-last) {
+  background: transparent;
+  border: none;
+  color: var(--p-text-muted-color);
+  border-radius: 6px;
+  min-width: 2rem;
+  height: 2rem;
+  font-size: 0.8rem;
+  transition: background 0.15s, color 0.15s;
+}
+
+:deep(.p-paginator-page:hover),
+:deep(.p-paginator-first:hover),
+:deep(.p-paginator-prev:hover),
+:deep(.p-paginator-next:hover),
+:deep(.p-paginator-last:hover) {
+  background: var(--p-surface-700);
+  color: var(--p-text-color);
+}
+
+:deep(.p-paginator-page.p-highlight) {
+  background: var(--p-surface-700);
+  color: var(--p-primary-400);
+  font-weight: 600;
+}
+
+:deep(.p-paginator-current) {
+  color: var(--p-text-muted-color);
+  font-size: 0.8rem;
+}
+
+/* Rows-per-page dropdown inside paginator */
+:deep(.p-paginator .p-select) {
+  background: var(--p-surface-800);
+  border-color: var(--p-surface-600);
+  font-size: 0.8rem;
+}
+
+:deep(.p-paginator .p-select .p-select-label) {
+  color: var(--p-text-muted-color);
+  font-size: 0.8rem;
+  padding: 0.25rem 0.5rem;
+}
+
+:deep(.p-paginator .p-select:hover) {
+  border-color: var(--p-surface-500);
 }
 </style>
