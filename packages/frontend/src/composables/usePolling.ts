@@ -5,12 +5,26 @@ export function usePolling(
   intervalSeconds: Ref<number>
 ) {
   const isPolling = ref(false);
+  const isPaused = ref(false);
+  const sleepUntil = ref<Date | null>(null);
   let timer: ReturnType<typeof setInterval> | null = null;
+  let sleepTimer: ReturnType<typeof setTimeout> | null = null;
+
+  function clearSleepTimer() {
+    if (sleepTimer) {
+      clearTimeout(sleepTimer);
+      sleepTimer = null;
+    }
+  }
 
   function start() {
-    stop();
+    if (timer) clearInterval(timer);
     isPolling.value = true;
+    isPaused.value = false;
+    sleepUntil.value = null;
+    clearSleepTimer();
     timer = setInterval(async () => {
+      if (isPaused.value) return;
       try {
         await callback();
       } catch {
@@ -21,10 +35,35 @@ export function usePolling(
 
   function stop() {
     isPolling.value = false;
+    isPaused.value = false;
+    sleepUntil.value = null;
+    clearSleepTimer();
     if (timer) {
       clearInterval(timer);
       timer = null;
     }
+  }
+
+  function pause() {
+    isPaused.value = true;
+    sleepUntil.value = null;
+    clearSleepTimer();
+  }
+
+  function resume() {
+    isPaused.value = false;
+    sleepUntil.value = null;
+    clearSleepTimer();
+  }
+
+  function sleepFor(ms: number) {
+    clearSleepTimer();
+    isPaused.value = true;
+    sleepUntil.value = new Date(Date.now() + ms);
+    sleepTimer = setTimeout(() => {
+      isPaused.value = false;
+      sleepUntil.value = null;
+    }, ms);
   }
 
   async function refreshNow() {
@@ -36,12 +75,12 @@ export function usePolling(
   }
 
   watch(intervalSeconds, () => {
-    if (isPolling.value) {
+    if (isPolling.value && !isPaused.value) {
       start();
     }
   });
 
   onUnmounted(() => stop());
 
-  return { isPolling, start, stop, refreshNow };
+  return { isPolling, isPaused, sleepUntil, start, stop, pause, resume, sleepFor, refreshNow };
 }
