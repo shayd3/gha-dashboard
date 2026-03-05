@@ -2,6 +2,7 @@
 import { ref, computed } from "vue";
 import { useViewsStore } from "../stores/views.js";
 import Dialog from "primevue/dialog";
+import Button from "primevue/button";
 
 const views = useViewsStore();
 
@@ -131,42 +132,31 @@ async function handleSaveAndSwitch() {
         >
           <i class="pi pi-bookmark view-icon" />
           <span class="view-name">{{ view.name }}</span>
-          <span
-            v-if="views.activeViewId === view.id && views.isDirty"
-            class="dirty-dot"
-            title="Unsaved changes"
-          />
 
           <button
+            v-if="views.activeViewId === view.id && views.isDirty"
+            class="icon-btn save"
+            v-tooltip.top="'Save changes'"
+            :disabled="savingView"
+            @click.stop="handleSaveView"
+          >
+            <i class="pi pi-check" />
+          </button>
+          <button
             class="icon-btn"
-            title="Rename"
+            v-tooltip.top="'Rename'"
             @click.stop="startEdit(view.id, view.name)"
           >
             <i class="pi pi-pencil" />
           </button>
           <button
             class="icon-btn danger"
-            title="Delete"
+            v-tooltip.top="'Delete'"
             @click.stop="confirmDeleteId = view.id"
           >
             <i class="pi pi-trash" />
           </button>
         </button>
-
-        <!-- Inline save button when this view is dirty -->
-        <div
-          v-if="views.activeViewId === view.id && views.isDirty"
-          class="save-changes-row"
-        >
-          <button
-            class="btn-primary-sm save-changes-btn"
-            :disabled="savingView"
-            @click="handleSaveView"
-          >
-            <i class="pi pi-check" style="font-size: 0.65rem" />
-            {{ savingView ? "Saving…" : "Save changes" }}
-          </button>
-        </div>
       </template>
     </div>
 
@@ -207,11 +197,9 @@ async function handleSaveAndSwitch() {
       </p>
       <template #footer>
         <div class="dirty-dialog-footer">
-          <button class="btn-ghost-sm" @click="views.cancelPendingAction()">Cancel</button>
-          <button class="btn-ghost-sm" @click="views.discardPendingAction()">Discard</button>
-          <button class="btn-primary-sm" :disabled="savingView" @click="handleSaveAndSwitch">
-            {{ savingView ? "Saving…" : "Save & Switch" }}
-          </button>
+          <Button label="Cancel" severity="secondary" text @click="views.cancelPendingAction()" />
+          <Button label="Discard" severity="secondary" outlined @click="views.discardPendingAction()" />
+          <Button :label="savingView ? 'Saving…' : 'Save & Switch'" severity="primary" :disabled="savingView" @click="handleSaveAndSwitch" />
         </div>
       </template>
     </Dialog>
@@ -287,6 +275,10 @@ async function handleSaveAndSwitch() {
 }
 
 .view-item:hover .icon-btn {
+  opacity: 1;
+}
+
+.view-item.active .icon-btn {
   opacity: 1;
 }
 
@@ -427,24 +419,13 @@ async function handleSaveAndSwitch() {
 
 /* ---- dirty-state styles ---- */
 
-.dirty-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--p-orange-400);
-  flex-shrink: 0;
+.icon-btn.save {
+  color: var(--p-green-400);
+  opacity: 1;
 }
 
-.save-changes-row {
-  padding: 0.2rem 0.5rem 0.15rem 1.75rem;
-}
-
-.save-changes-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  font-size: 0.7rem;
-  padding: 0.175rem 0.5rem;
+.icon-btn.save:hover {
+  color: var(--p-green-300);
 }
 
 .dirty-dialog-body {
