@@ -17,12 +17,8 @@ export function usePolling(
     }
   }
 
-  function start() {
+  function restartTimer() {
     if (timer) clearInterval(timer);
-    isPolling.value = true;
-    isPaused.value = false;
-    sleepUntil.value = null;
-    clearSleepTimer();
     timer = setInterval(async () => {
       if (isPaused.value) return;
       try {
@@ -31,6 +27,14 @@ export function usePolling(
         // errors handled by caller
       }
     }, intervalSeconds.value * 1000);
+  }
+
+  function start() {
+    isPolling.value = true;
+    isPaused.value = false;
+    sleepUntil.value = null;
+    clearSleepTimer();
+    restartTimer();
   }
 
   function stop() {
@@ -75,8 +79,8 @@ export function usePolling(
   }
 
   watch(intervalSeconds, () => {
-    if (isPolling.value && !isPaused.value) {
-      start();
+    if (isPolling.value) {
+      restartTimer();
     }
   });
 
