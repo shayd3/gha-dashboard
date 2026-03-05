@@ -64,6 +64,8 @@ const rows = computed(() => dashboard.filteredRuns);
       sortField="createdAt"
       :sortOrder="-1"
       size="small"
+      scrollable
+      scrollHeight="flex"
       tableStyle="min-width: 52rem"
       class="runs-datatable"
     >
@@ -162,6 +164,9 @@ const rows = computed(() => dashboard.filteredRuns);
   border: 1px solid var(--p-surface-700);
   overflow: hidden;
   flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Empty / error states */

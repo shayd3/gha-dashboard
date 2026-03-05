@@ -146,7 +146,7 @@ watch(
 .dashboard {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100vh;
   background: var(--p-surface-950);
 }
 
@@ -154,6 +154,7 @@ watch(
   display: flex;
   flex: 1;
   overflow: hidden;
+  min-height: 0;
 }
 
 .sidebar {
@@ -168,8 +169,9 @@ watch(
 
 .main-content {
   flex: 1;
+  min-height: 0;
   padding: 1rem 1.25rem;
-  overflow-x: auto;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   gap: 1rem;
