@@ -24,22 +24,24 @@ describe("MemoryCache (via fastify.cache)", () => {
 
   it("returns undefined for an expired entry", () => {
     vi.useFakeTimers();
-    app.cache.set("expiring", "data", 1); // 1 second TTL
-
-    vi.advanceTimersByTime(1001);
-
-    expect(app.cache.get("expiring")).toBeUndefined();
-    vi.useRealTimers();
+    try {
+      app.cache.set("expiring", "data", 1); // 1 second TTL
+      vi.advanceTimersByTime(1001);
+      expect(app.cache.get("expiring")).toBeUndefined();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("does not return expired value before TTL elapses", () => {
     vi.useFakeTimers();
-    app.cache.set("alive", "still here", 5);
-
-    vi.advanceTimersByTime(4999);
-
-    expect(app.cache.get("alive")).toBe("still here");
-    vi.useRealTimers();
+    try {
+      app.cache.set("alive", "still here", 5);
+      vi.advanceTimersByTime(4999);
+      expect(app.cache.get("alive")).toBe("still here");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("invalidate removes keys that contain the pattern", () => {
@@ -62,12 +64,14 @@ describe("MemoryCache (via fastify.cache)", () => {
 
   it("overwriting a key replaces the value and resets TTL", () => {
     vi.useFakeTimers();
-    app.cache.set("key", "v1", 2);
-    vi.advanceTimersByTime(1500);
-    app.cache.set("key", "v2", 10);
-    vi.advanceTimersByTime(1500); // would have expired with original TTL
-
-    expect(app.cache.get("key")).toBe("v2");
-    vi.useRealTimers();
+    try {
+      app.cache.set("key", "v1", 2);
+      vi.advanceTimersByTime(1500);
+      app.cache.set("key", "v2", 10);
+      vi.advanceTimersByTime(1500); // would have expired with original TTL
+      expect(app.cache.get("key")).toBe("v2");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

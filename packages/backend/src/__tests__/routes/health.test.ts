@@ -7,7 +7,7 @@ describe("GET /api/health", () => {
   let app: FastifyInstance;
 
   afterEach(async () => {
-    await app.close();
+    if (app) await app.close();
   });
 
   it("returns 200 with status ok", async () => {

@@ -1,11 +1,8 @@
 import Fastify, { FastifyInstance } from "fastify";
 import cookie from "@fastify/cookie";
 import { cachePlugin } from "../plugins/cache.js";
-import {
-  authPlugin,
-  createSessionToken,
-  SessionPayload,
-} from "../plugins/auth.js";
+import { authPlugin, createSessionToken } from "../plugins/auth.js";
+import type { SessionPayload } from "../plugins/auth.js";
 import { Octokit } from "octokit";
 
 export const DEFAULT_SESSION: SessionPayload = {

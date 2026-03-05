@@ -74,13 +74,21 @@ describe("Auth routes", () => {
     });
 
     it("includes the client_id and required scopes in the redirect URL", async () => {
-      process.env.GITHUB_CLIENT_ID = "my-client-id";
-      const res = await app.inject({ method: "GET", url: "/api/auth/login" });
-      const location = res.headers["location"] as string;
+      const previousClientId = process.env.GITHUB_CLIENT_ID;
+      try {
+        process.env.GITHUB_CLIENT_ID = "my-client-id";
+        const res = await app.inject({ method: "GET", url: "/api/auth/login" });
+        const location = res.headers["location"] as string;
 
-      expect(location).toContain("client_id=my-client-id");
-      expect(location).toContain("scope=repo+read%3Aorg");
-      delete process.env.GITHUB_CLIENT_ID;
+        expect(location).toContain("client_id=my-client-id");
+        expect(location).toContain("scope=repo+read%3Aorg");
+      } finally {
+        if (previousClientId === undefined) {
+          delete process.env.GITHUB_CLIENT_ID;
+        } else {
+          process.env.GITHUB_CLIENT_ID = previousClientId;
+        }
+      }
     });
   });
 
