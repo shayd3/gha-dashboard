@@ -23,7 +23,7 @@ const { isPolling, isPaused, sleepUntil, start, pause, resume, sleepFor, refresh
   refreshInterval
 );
 
-const sleepMenuRef = ref();
+const sleepMenuRef = ref<InstanceType<typeof Popover> | null>(null);
 
 function toggleSleepMenu(event: MouseEvent) {
   sleepMenuRef.value?.toggle(event);
