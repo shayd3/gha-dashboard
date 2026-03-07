@@ -75,6 +75,7 @@ function toggleRepoSelection(fullName: string) {
         v-if="dashboard.selectedRepos.length"
         class="clear-selection-btn"
         title="Clear selection"
+        aria-label="Clear selection"
         @click="dashboard.clearSelection()"
       >
         <i class="pi pi-filter-slash" />

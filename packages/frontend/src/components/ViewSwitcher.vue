@@ -9,10 +9,15 @@ const views = useViewsStore();
 const dashboard = useDashboardStore();
 
 /** "All repos" is active when no view is selected and every loaded repo is checked. */
+const allLoadedRepos = computed(() => Object.values(dashboard.reposByOrg).flat());
+const selectedReposSet = computed(() => new Set(dashboard.selectedRepos));
+
 const allReposActive = computed(() => {
   if (views.activeViewId !== null) return false;
-  const allLoaded = Object.values(dashboard.reposByOrg).flat();
-  return allLoaded.length > 0 && allLoaded.every((r) => dashboard.selectedRepos.includes(r.fullName));
+  const allLoaded = allLoadedRepos.value;
+  if (allLoaded.length === 0) return false;
+  const selectedSet = selectedReposSet.value;
+  return allLoaded.every((r) => selectedSet.has(r.fullName));
 });
 
 const newViewName = ref("");
@@ -183,10 +188,10 @@ async function handleSaveAndSwitch() {
         @keydown.escape="showInput = false"
         autofocus
       />
-      <button class="icon-btn-confirm save" :disabled="saving" @click="saveNewView" title="Save">
+      <button class="icon-btn-confirm save" :disabled="saving" @click="saveNewView" title="Save" aria-label="Save view">
         <i class="pi pi-save" />
       </button>
-      <button class="icon-btn-confirm" @click="showInput = false" title="Cancel">
+      <button class="icon-btn-confirm" @click="showInput = false" title="Cancel" aria-label="Cancel">
         <i class="pi pi-times" />
       </button>
     </div>
