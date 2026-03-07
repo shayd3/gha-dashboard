@@ -1,10 +1,19 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
 import { useViewsStore } from "../stores/views.js";
+import { useDashboardStore } from "../stores/dashboard.js";
 import Dialog from "primevue/dialog";
 import Button from "primevue/button";
 
 const views = useViewsStore();
+const dashboard = useDashboardStore();
+
+/** "All repos" is active when no view is selected and every loaded repo is checked. */
+const allReposActive = computed(() => {
+  if (views.activeViewId !== null) return false;
+  const allLoaded = Object.values(dashboard.reposByOrg).flat();
+  return allLoaded.length > 0 && allLoaded.every((r) => dashboard.selectedRepos.includes(r.fullName));
+});
 
 const newViewName = ref("");
 const showInput = ref(false);
@@ -88,7 +97,7 @@ async function handleSaveAndSwitch() {
     <!-- All repos (default) -->
     <button
       class="view-item"
-      :class="{ active: views.activeViewId === null }"
+      :class="{ active: allReposActive }"
       @click="views.clearActiveView()"
     >
       <i class="pi pi-th-large view-icon" />
@@ -174,10 +183,12 @@ async function handleSaveAndSwitch() {
         @keydown.escape="showInput = false"
         autofocus
       />
-      <button class="btn-primary-sm" :disabled="saving" @click="saveNewView">
-        {{ saving ? "…" : "Save" }}
+      <button class="icon-btn-confirm save" :disabled="saving" @click="saveNewView" title="Save">
+        <i class="pi pi-save" />
       </button>
-      <button class="btn-ghost-sm" @click="showInput = false">Cancel</button>
+      <button class="icon-btn-confirm" @click="showInput = false" title="Cancel">
+        <i class="pi pi-times" />
+      </button>
     </div>
     <p v-if="error" class="save-error">{{ error }}</p>
 
@@ -325,6 +336,15 @@ async function handleSaveAndSwitch() {
 .icon-btn-confirm:hover {
   background: var(--p-surface-600);
   color: var(--p-text-color);
+}
+
+.icon-btn-confirm.save {
+  color: var(--p-green-400);
+}
+
+.icon-btn-confirm.save:hover {
+  color: var(--p-green-300);
+  background: var(--p-surface-600);
 }
 
 .icon-btn-confirm.danger:hover {

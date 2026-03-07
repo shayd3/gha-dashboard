@@ -119,6 +119,18 @@ export const useDashboardStore = defineStore(
       }
     }
 
+    async function selectAllRepos(): Promise<void> {
+      // Ensure repos are loaded for every org
+      await Promise.all(
+        orgs.value
+          .filter((o) => !reposByOrg.value[o.login])
+          .map((o) => fetchRepos(o.login))
+      );
+      const all = Object.values(reposByOrg.value).flat().map((r) => r.fullName);
+      selectedRepos.value = all;
+      filters.value = { status: null, branch: null, workflow: null, event: null };
+    }
+
     function clearSelection(): void {
       selectedRepos.value = [];
       filters.value = { status: null, branch: null, workflow: null, event: null };
@@ -143,6 +155,7 @@ export const useDashboardStore = defineStore(
       fetchRuns,
       toggleRepo,
       applyView,
+      selectAllRepos,
       clearSelection,
     };
   },
