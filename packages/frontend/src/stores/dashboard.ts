@@ -20,12 +20,14 @@ export const useDashboardStore = defineStore(
     const lastUpdated = ref<string | null>(null);
     const refreshInterval = ref(30);
 
-    const filters = ref<DashboardFilters>({
+    const defaultFilters = (): DashboardFilters => ({
       status: null,
       branch: null,
       workflow: null,
       event: null,
     });
+
+    const filters = ref<DashboardFilters>(defaultFilters());
 
     const filteredRuns = computed(() => {
       let result = runs.value;
@@ -115,13 +117,25 @@ export const useDashboardStore = defineStore(
       if (viewFilters) {
         filters.value = { ...viewFilters };
       } else {
-        filters.value = { status: null, branch: null, workflow: null, event: null };
+        filters.value = defaultFilters();
       }
+    }
+
+    async function selectAllRepos(): Promise<void> {
+      // Ensure repos are loaded for every org
+      await Promise.all(
+        orgs.value
+          .filter((o) => !reposByOrg.value[o.login])
+          .map((o) => fetchRepos(o.login))
+      );
+      const all = Object.values(reposByOrg.value).flat().map((r) => r.fullName);
+      selectedRepos.value = all;
+      filters.value = defaultFilters();
     }
 
     function clearSelection(): void {
       selectedRepos.value = [];
-      filters.value = { status: null, branch: null, workflow: null, event: null };
+      filters.value = defaultFilters();
     }
 
     return {
@@ -143,6 +157,7 @@ export const useDashboardStore = defineStore(
       fetchRuns,
       toggleRepo,
       applyView,
+      selectAllRepos,
       clearSelection,
     };
   },

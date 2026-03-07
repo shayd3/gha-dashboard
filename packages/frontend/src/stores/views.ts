@@ -95,11 +95,11 @@ export const useViewsStore = defineStore(
       _takeSnapshot();
     }
 
-    function _doClear(): void {
+    async function _doClear(): Promise<void> {
       activeViewId.value = null;
       _clearSnapshot();
       const dashboard = useDashboardStore();
-      dashboard.clearSelection();
+      await dashboard.selectAllRepos();
     }
 
     /** Public: attempt to activate a view. Shows dirty dialog if needed. */
@@ -112,12 +112,12 @@ export const useViewsStore = defineStore(
     }
 
     /** Public: attempt to switch to "All repos". Shows dirty dialog if needed. */
-    function clearActiveView(): void {
+    async function clearActiveView(): Promise<void> {
       if (isDirty.value) {
         pendingAction.value = { type: "clear" };
         return;
       }
-      _doClear();
+      await _doClear();
     }
 
     /** Save current dashboard state back to the active view, then refresh snapshot. */
@@ -135,24 +135,24 @@ export const useViewsStore = defineStore(
 
     async function confirmPendingAction(): Promise<void> {
       await saveActiveView();
-      _executePending();
+      await _executePending();
     }
 
-    function discardPendingAction(): void {
+    async function discardPendingAction(): Promise<void> {
       _clearSnapshot(); // discard means we no longer care about snapshot
-      _executePending();
+      await _executePending();
     }
 
     function cancelPendingAction(): void {
       pendingAction.value = null;
     }
 
-    function _executePending(): void {
+    async function _executePending(): Promise<void> {
       const action = pendingAction.value;
       pendingAction.value = null;
       if (!action) return;
       if (action.type === "activate") _doActivate(action.id);
-      else _doClear();
+      else await _doClear();
     }
 
     return {

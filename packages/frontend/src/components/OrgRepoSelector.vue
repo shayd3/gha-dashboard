@@ -71,6 +71,15 @@ function toggleRepoSelection(fullName: string) {
         :value="dashboard.selectedRepos.length"
         severity="primary"
       />
+      <button
+        v-if="dashboard.selectedRepos.length"
+        class="clear-selection-btn"
+        title="Clear selection"
+        aria-label="Clear selection"
+        @click="dashboard.clearSelection()"
+      >
+        <i class="pi pi-filter-slash" />
+      </button>
     </div>
 
     <div v-if="!dashboard.orgs.length" class="loading-state">
@@ -148,7 +157,7 @@ function toggleRepoSelection(fullName: string) {
 .selector-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 0.375rem;
   margin-bottom: 0.875rem;
   padding: 0 0.25rem;
 }
@@ -158,6 +167,26 @@ function toggleRepoSelection(fullName: string) {
   font-weight: 700;
   letter-spacing: 0.08em;
   color: var(--p-text-muted-color);
+  margin-right: auto;
+}
+
+.clear-selection-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--p-text-muted-color);
+  cursor: pointer;
+  padding: 0.15rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  transition: color 0.15s, background 0.15s;
+}
+
+.clear-selection-btn:hover {
+  background: var(--p-surface-600);
+  color: var(--p-text-color);
 }
 
 .loading-state {
