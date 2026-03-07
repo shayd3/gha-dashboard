@@ -110,6 +110,20 @@ export const useDashboardStore = defineStore(
       }
     }
 
+    function applyView(repos: string[], viewFilters: typeof filters.value | null): void {
+      selectedRepos.value = [...repos];
+      if (viewFilters) {
+        filters.value = { ...viewFilters };
+      } else {
+        filters.value = { status: null, branch: null, workflow: null, event: null };
+      }
+    }
+
+    function clearSelection(): void {
+      selectedRepos.value = [];
+      filters.value = { status: null, branch: null, workflow: null, event: null };
+    }
+
     return {
       orgs,
       reposByOrg,
@@ -128,6 +142,8 @@ export const useDashboardStore = defineStore(
       fetchRepos,
       fetchRuns,
       toggleRepo,
+      applyView,
+      clearSelection,
     };
   },
   {

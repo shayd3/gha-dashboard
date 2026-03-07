@@ -2,11 +2,19 @@
 
 Single pane of glass for monitoring GitHub Actions workflow statuses across multiple organizations and repositories.
 
+## Features
+
+- Monitor workflow runs across multiple orgs and repos in one view
+- Filter runs by status, branch, workflow name, or event
+- **Named views** — save your current repo selection and filters as a named view, switch instantly from the sidebar, synced across devices via PostgreSQL
+- **Editable views** — modify a view's repos or filters by changing the dashboard while a view is active; a dirty indicator and "Save changes" button appear in the sidebar. Switching views while unsaved prompts to Save & Switch, Discard, or Cancel
+
 ## Tech Stack
 
 - **Frontend**: Vue 3, Vite, PrimeVue, Pinia
 - **Backend**: Fastify, octokit
 - **Auth**: GitHub OAuth with JWT session cookies
+- **Database**: PostgreSQL (views persistence)
 - **Shared**: TypeScript types across frontend/backend
 - **Deployment**: Docker, Helm
 
@@ -17,6 +25,7 @@ Monorepo managed with pnpm workspaces (`packages/shared`, `packages/backend`, `p
 - Node.js 20+
 - pnpm 10+
 - A [GitHub OAuth App](https://github.com/settings/developers) with callback URL `http://localhost:5173/api/auth/callback` (for local dev)
+- PostgreSQL 14+ (optional — for views persistence; without it, views are in-memory only)
 
 ## Setup
 
@@ -30,6 +39,14 @@ Fill in your `.env`:
 GITHUB_CLIENT_ID=...
 GITHUB_CLIENT_SECRET=...
 JWT_SECRET=<random-string>
+# Optional: omit to use in-memory view storage (not persisted across restarts)
+DATABASE_URL=postgresql://gha:gha@localhost:5432/gha_dashboard
+```
+
+Start a local Postgres instance (or use the Docker Compose service):
+
+```bash
+docker compose up db -d
 ```
 
 Install and run:
@@ -46,11 +63,23 @@ This starts the backend on `:3000` and frontend on `:5173`. The Vite dev server 
 ```
 packages/
   shared/     Shared TypeScript types
-  backend/    Fastify API — auth, GitHub API proxy, caching
+  backend/    Fastify API — auth, GitHub API proxy, caching, views
   frontend/   Vue 3 SPA — dashboard UI
 docker/       Dockerfiles + nginx config
 deploy/helm/  Helm chart for K8s deployment
 ```
+
+## Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `GITHUB_CLIENT_ID` | Yes | GitHub OAuth App client ID |
+| `GITHUB_CLIENT_SECRET` | Yes | GitHub OAuth App client secret |
+| `JWT_SECRET` | Yes | Random string for signing JWT session cookies |
+| `DATABASE_URL` | No | PostgreSQL connection string, e.g. `postgresql://user:pass@localhost:5432/gha_dashboard`. If not set, views are stored in-memory only (not persisted across restarts) and a warning is logged. |
+| `GITHUB_API_URL` | No | GitHub Enterprise API endpoint (default: `https://api.github.com`) |
+| `CORS_ORIGIN` | No | Allowed origin for CORS (default: `http://localhost:5173`) |
+| `PORT` | No | Backend port (default: `3000`) |
 
 ## API Routes
 
@@ -66,6 +95,10 @@ deploy/helm/  Helm chart for K8s deployment
 | GET | `/api/repos/:owner/:repo/runs` | List runs for a repo |
 | GET | `/api/runs?repos=org/repo1,org/repo2` | Aggregated runs across repos |
 | GET | `/api/health` | Health check |
+| GET | `/api/views` | List saved views for the authenticated user |
+| POST | `/api/views` | Create a view (`{ name, repos, filters? }`) — 201 on success, 409 on duplicate name, 400 if over 20-view limit |
+| PUT | `/api/views/:id` | Update a view (name, repos, filters, position) |
+| DELETE | `/api/views/:id` | Delete a view — 204 on success |
 
 ## Docker
 
@@ -75,6 +108,10 @@ docker compose up --build
 
 Frontend serves on `:80`, backend on `:3000`. Nginx proxies `/api` to the backend container.
 
+The `db` service runs PostgreSQL 16 and exposes no ports externally. The backend waits for `pg_isready` before starting.
+
+**Note:** `docker compose down -v` will delete the `pgdata` volume and all stored views.
+
 ## Helm
 
 ```bash
@@ -82,10 +119,23 @@ helm install gha-dashboard ./deploy/helm/gha-dashboard \
   --set github.clientId=YOUR_ID \
   --set github.clientSecret=YOUR_SECRET \
   --set jwt.secret=YOUR_JWT_SECRET \
+  --set database.url='postgresql://user:pass@your-postgres-host:5432/gha_dashboard' \
   --set ingress.host=gha-dashboard.your-domain.com
 ```
 
+`database.url` is stored in the Kubernetes Secret alongside other credentials. For production, use a managed PostgreSQL service (RDS, Cloud SQL, Azure Database, etc.) and set `database.url` to its connection string. If `database.url` is left empty, the backend falls back to in-memory view storage.
+
 See `deploy/helm/gha-dashboard/values.yaml` for all configurable values (replicas, resources, TLS, GitHub Enterprise API URL, etc).
+
+## Data Persistence
+
+Views are stored in PostgreSQL in the `views` table. The table is created automatically on backend startup via an idempotent `CREATE TABLE IF NOT EXISTS` migration — no migration tool is required.
+
+`DATABASE_URL` is **optional**. If it is not set the backend starts normally, logs a warning, and stores views in-memory — they will be lost on restart. This is convenient for local development or demos where persistence is not needed.
+
+**Local dev with persistence:** `docker compose up db -d` starts a Postgres container. The `DATABASE_URL` in `.env` should point to it.
+
+**Production:** Use a managed PostgreSQL service (AWS RDS, GCP Cloud SQL, Azure Database for PostgreSQL, etc.) and set `DATABASE_URL` (or the Helm `database.url` value) to the connection string. The backend is stateless and horizontally scalable — multiple replicas can share one PostgreSQL instance.
 
 ## Caching
 

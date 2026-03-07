@@ -10,11 +10,13 @@ import cors from "@fastify/cors";
 import cookie from "@fastify/cookie";
 import { authPlugin } from "./plugins/auth.js";
 import { cachePlugin } from "./plugins/cache.js";
+import { dbPlugin } from "./plugins/db.js";
 import { authRoutes } from "./routes/auth.js";
 import { orgRoutes } from "./routes/orgs.js";
 import { repoRoutes } from "./routes/repos.js";
 import { workflowRoutes } from "./routes/workflows.js";
 import { healthRoutes } from "./routes/health.js";
+import { viewRoutes } from "./routes/views.js";
 
 const PORT = parseInt(process.env.PORT || "3000", 10);
 const HOST = process.env.HOST || "0.0.0.0";
@@ -29,12 +31,14 @@ await app.register(cors, {
 await app.register(cookie);
 await app.register(cachePlugin);
 await app.register(authPlugin);
+await app.register(dbPlugin);
 
 await app.register(healthRoutes);
 await app.register(authRoutes, { prefix: "/api/auth" });
 await app.register(orgRoutes, { prefix: "/api" });
 await app.register(repoRoutes, { prefix: "/api" });
 await app.register(workflowRoutes, { prefix: "/api" });
+await app.register(viewRoutes, { prefix: "/api" });
 
 try {
   await app.listen({ port: PORT, host: HOST });

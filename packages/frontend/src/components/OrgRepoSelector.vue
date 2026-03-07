@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { useDashboardStore } from "../stores/dashboard.js";
+import { useViewsStore } from "../stores/views.js";
 import Checkbox from "primevue/checkbox";
 import Badge from "primevue/badge";
+import ViewSwitcher from "./ViewSwitcher.vue";
 
 const dashboard = useDashboardStore();
+const views = useViewsStore();
 const expandedOrgs = ref<Set<string>>(new Set());
 
 async function toggleOrg(orgLogin: string) {
@@ -51,10 +54,16 @@ function isSomeOrgSelected(orgLogin: string) {
   const repos = dashboard.reposByOrg[orgLogin] || [];
   return repos.some((r) => dashboard.selectedRepos.includes(r.fullName)) && !isAllOrgSelected(orgLogin);
 }
+
+function toggleRepoSelection(fullName: string) {
+  dashboard.toggleRepo(fullName);
+}
 </script>
 
 <template>
   <div class="org-repo-selector">
+    <ViewSwitcher />
+
     <div class="selector-header">
       <span class="selector-title">ACCOUNTS</span>
       <Badge
@@ -110,13 +119,13 @@ function isSomeOrgSelected(orgLogin: string) {
               :key="repo.id"
               class="repo-item"
               :class="{ selected: isRepoSelected(repo.fullName) }"
-              @click="dashboard.toggleRepo(repo.fullName)"
+              @click="toggleRepoSelection(repo.fullName)"
             >
               <Checkbox
                 :modelValue="isRepoSelected(repo.fullName)"
                 binary
                 @click.stop
-                @change="dashboard.toggleRepo(repo.fullName)"
+                @change="toggleRepoSelection(repo.fullName)"
               />
               <span class="repo-name">{{ repo.name }}</span>
               <i
