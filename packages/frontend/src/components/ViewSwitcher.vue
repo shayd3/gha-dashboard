@@ -125,10 +125,14 @@ async function handleSaveAndSwitch() {
       </div>
 
       <template v-else>
-        <button
+        <div
           class="view-item"
           :class="{ active: views.activeViewId === view.id }"
+          role="button"
+          tabindex="0"
           @click="views.activateView(view.id)"
+          @keydown.enter="views.activateView(view.id)"
+          @keydown.space.prevent="views.activateView(view.id)"
         >
           <i class="pi pi-bookmark view-icon" />
           <span class="view-name">{{ view.name }}</span>
@@ -156,7 +160,7 @@ async function handleSaveAndSwitch() {
           >
             <i class="pi pi-trash" />
           </button>
-        </button>
+        </div>
       </template>
     </div>
 
