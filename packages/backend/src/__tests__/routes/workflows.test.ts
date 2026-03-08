@@ -199,13 +199,13 @@ describe("Workflow routes", () => {
       expect(first.runStartedAt).toBe(first.createdAt);
     });
 
-    it("passes branch and status filters to the GitHub API", async () => {
+    it("passes branch, status, and actor filters to the GitHub API", async () => {
       mockListWorkflowRunsForRepo.mockResolvedValue({ data: { workflow_runs: [] } });
 
       const cookie = await sessionCookie();
       await app.inject({
         method: "GET",
-        url: "/api/repos/my-org/my-repo/runs?branch=feature%2Ftest&status=completed&per_page=5",
+        url: "/api/repos/my-org/my-repo/runs?branch=feature%2Ftest&status=completed&per_page=5&actor=alice",
         headers: { cookie },
       });
 
@@ -214,6 +214,7 @@ describe("Workflow routes", () => {
           branch: "feature/test",
           status: "completed",
           per_page: 5,
+          actor: "alice",
         })
       );
     });
@@ -291,6 +292,92 @@ describe("Workflow routes", () => {
       const body = res.json<{ id: number }[]>();
       expect(body).toHaveLength(1);
       expect(body[0].id).toBe(999);
+    });
+
+    it("fetches upstream runs with actor filter when upstream_repos is provided", async () => {
+      const forkRun = makeRun({ id: 100, name: "Fork CI" });
+      const upstreamRun = makeRun({ id: 200, name: "Upstream CI", created_at: "2026-03-03T10:00:00Z", updated_at: "2026-03-03T10:05:00Z" });
+
+      mockListWorkflowRunsForRepo
+        .mockResolvedValueOnce({ data: { workflow_runs: [forkRun] } })      // fork repo
+        .mockResolvedValueOnce({ data: { workflow_runs: [upstreamRun] } }); // upstream repo
+
+      const cookie = await sessionCookie();
+      const res = await app.inject({
+        method: "GET",
+        url: "/api/runs?repos=testuser/my-fork&upstream_repos=upstream-org/my-fork:testuser:testuser/my-fork",
+        headers: { cookie },
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = res.json<{ id: number; isUpstreamRun?: boolean; forkRepoFullName?: string }[]>();
+      expect(body).toHaveLength(2);
+
+      // Upstream run should be first (newer)
+      const upstream = body.find((r) => r.id === 200);
+      expect(upstream?.isUpstreamRun).toBe(true);
+      expect(upstream?.forkRepoFullName).toBe("testuser/my-fork");
+
+      // Fork run should not be marked as upstream
+      const fork = body.find((r) => r.id === 100);
+      expect(fork?.isUpstreamRun).toBeUndefined();
+    });
+
+    it("passes actor filter to GitHub API for upstream repos", async () => {
+      mockListWorkflowRunsForRepo
+        .mockResolvedValue({ data: { workflow_runs: [] } });
+
+      const cookie = await sessionCookie();
+      await app.inject({
+        method: "GET",
+        url: "/api/runs?repos=testuser/my-fork&upstream_repos=upstream-org/my-fork:alice:testuser/my-fork",
+        headers: { cookie },
+      });
+
+      // Second call should be for the upstream repo with actor filter
+      expect(mockListWorkflowRunsForRepo).toHaveBeenCalledTimes(2);
+      expect(mockListWorkflowRunsForRepo).toHaveBeenCalledWith(
+        expect.objectContaining({
+          owner: "upstream-org",
+          repo: "my-fork",
+          actor: "alice",
+        })
+      );
+    });
+
+    it("continues when upstream repo fetch fails", async () => {
+      const forkRun = makeRun({ id: 100 });
+      mockListWorkflowRunsForRepo
+        .mockResolvedValueOnce({ data: { workflow_runs: [forkRun] } })  // fork repo
+        .mockRejectedValueOnce(new Error("Not found"));                 // upstream repo
+
+      const cookie = await sessionCookie();
+      const res = await app.inject({
+        method: "GET",
+        url: "/api/runs?repos=testuser/my-fork&upstream_repos=upstream-org/my-fork:testuser:testuser/my-fork",
+        headers: { cookie },
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = res.json<{ id: number }[]>();
+      expect(body).toHaveLength(1);
+      expect(body[0].id).toBe(100);
+    });
+
+    it("skips malformed upstream_repos entries", async () => {
+      mockListWorkflowRunsForRepo
+        .mockResolvedValue({ data: { workflow_runs: [makeRun()] } });
+
+      const cookie = await sessionCookie();
+      const res = await app.inject({
+        method: "GET",
+        url: "/api/runs?repos=my-org/my-repo&upstream_repos=bad-entry",
+        headers: { cookie },
+      });
+
+      expect(res.statusCode).toBe(200);
+      // Only the regular repo call, not the malformed upstream
+      expect(mockListWorkflowRunsForRepo).toHaveBeenCalledTimes(1);
     });
   });
 });

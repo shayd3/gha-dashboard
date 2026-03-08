@@ -4,7 +4,11 @@ import type { Workflow, WorkflowRun } from "@gha-dashboard/shared";
 const WORKFLOW_CACHE_TTL = 300; // 5 minutes
 const RUNS_CACHE_TTL = 60; // 1 minute
 
-function mapRun(run: Record<string, unknown>, repoFullName: string): WorkflowRun {
+function mapRun(
+  run: Record<string, unknown>,
+  repoFullName: string,
+  options?: { isUpstreamRun?: boolean; forkRepoFullName?: string }
+): WorkflowRun {
   const r = run as {
     id: number;
     name: string | null;
@@ -48,6 +52,8 @@ function mapRun(run: Record<string, unknown>, repoFullName: string): WorkflowRun
     runStartedAt: r.run_started_at || r.created_at,
     url: r.html_url,
     duration,
+    ...(options?.isUpstreamRun ? { isUpstreamRun: true } : {}),
+    ...(options?.forkRepoFullName ? { forkRepoFullName: options.forkRepoFullName } : {}),
   };
 }
 
@@ -86,16 +92,16 @@ export const workflowRoutes: FastifyPluginAsync = async (fastify) => {
   // List runs for a repo
   fastify.get<{
     Params: { owner: string; repo: string };
-    Querystring: { branch?: string; status?: string; per_page?: string };
+    Querystring: { branch?: string; status?: string; per_page?: string; actor?: string };
   }>("/repos/:owner/:repo/runs", async (request, reply) => {
     await fastify.authenticate(request, reply);
     if (reply.sent) return;
 
     const { owner, repo } = request.params;
-    const { branch, status, per_page } = request.query;
+    const { branch, status, per_page, actor } = request.query;
     const perPage = parseInt(per_page || "30", 10);
 
-    const cacheKey = `${request.session.userId}:runs:${owner}/${repo}:${branch || ""}:${status || ""}:${perPage}`;
+    const cacheKey = `${request.session.userId}:runs:${owner}/${repo}:${branch || ""}:${status || ""}:${perPage}:${actor || ""}`;
     const cached = fastify.cache.get<WorkflowRun[]>(cacheKey);
     if (cached) return cached;
 
@@ -106,6 +112,7 @@ export const workflowRoutes: FastifyPluginAsync = async (fastify) => {
         per_page: perPage,
         ...(branch ? { branch } : {}),
         ...(status ? { status: status as "completed" | "queued" | "in_progress" } : {}),
+        ...(actor ? { actor } : {}),
       }
     );
 
@@ -117,14 +124,14 @@ export const workflowRoutes: FastifyPluginAsync = async (fastify) => {
     return runs;
   });
 
-  // Aggregated runs across multiple repos
-  fastify.get<{ Querystring: { repos: string; per_page?: string } }>(
+  // Aggregated runs across multiple repos (with optional upstream fork support)
+  fastify.get<{ Querystring: { repos: string; per_page?: string; upstream_repos?: string } }>(
     "/runs",
     async (request, reply) => {
       await fastify.authenticate(request, reply);
       if (reply.sent) return;
 
-      const { repos, per_page } = request.query;
+      const { repos, per_page, upstream_repos } = request.query;
       if (!repos) {
         reply.status(400).send({ error: "repos query parameter is required" });
         return;
@@ -133,6 +140,7 @@ export const workflowRoutes: FastifyPluginAsync = async (fastify) => {
       const perPage = parseInt(per_page || "20", 10);
       const repoList = repos.split(",").map((r) => r.trim());
 
+      // Fetch runs for directly-selected repos
       const results = await Promise.all(
         repoList.map(async (repoFullName) => {
           const [owner, repo] = repoFullName.split("/");
@@ -165,7 +173,53 @@ export const workflowRoutes: FastifyPluginAsync = async (fastify) => {
         })
       );
 
-      const allRuns = results
+      // Fetch upstream runs for fork repos (filtered by actor)
+      let upstreamResults: WorkflowRun[][] = [];
+      if (upstream_repos) {
+        const upstreamEntries = upstream_repos.split(",").map((e) => e.trim());
+        upstreamResults = await Promise.all(
+          upstreamEntries.map(async (entry) => {
+            // Format: upstreamOwner/upstreamRepo:actor:forkOwner/forkRepo
+            const parts = entry.split(":");
+            if (parts.length < 3) return [];
+            const [upstreamFullName, actor, forkFullName] = parts;
+            const [owner, repo] = upstreamFullName.split("/");
+            if (!owner || !repo || !actor) return [];
+
+            const cacheKey = `${request.session.userId}:runs:${upstreamFullName}:upstream:${actor}:${perPage}`;
+            const cached = fastify.cache.get<WorkflowRun[]>(cacheKey);
+            if (cached) return cached;
+
+            try {
+              const { data } =
+                await request.octokit.rest.actions.listWorkflowRunsForRepo({
+                  owner,
+                  repo,
+                  per_page: perPage,
+                  actor,
+                });
+
+              const runs = data.workflow_runs.map((r) =>
+                mapRun(
+                  r as unknown as Record<string, unknown>,
+                  upstreamFullName,
+                  { isUpstreamRun: true, forkRepoFullName: forkFullName }
+                )
+              );
+              fastify.cache.set(cacheKey, runs, RUNS_CACHE_TTL);
+              return runs;
+            } catch (err) {
+              fastify.log.warn(
+                { err, upstream: upstreamFullName, actor },
+                "Failed to fetch upstream runs"
+              );
+              return [];
+            }
+          })
+        );
+      }
+
+      const allRuns = [...results, ...upstreamResults]
         .flat()
         .sort(
           (a, b) =>

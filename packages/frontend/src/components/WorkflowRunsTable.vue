@@ -92,6 +92,14 @@ const rows = computed(() => dashboard.filteredRuns);
             <i class="pi pi-github" style="font-size: 0.75rem; opacity: 0.6" />
             {{ (data as WorkflowRun).repoFullName.split("/")[1] }}
           </a>
+          <span
+            v-if="(data as WorkflowRun).isUpstreamRun"
+            class="upstream-badge"
+            :title="`Upstream run — triggered from fork ${(data as WorkflowRun).forkRepoFullName || ''}`"
+          >
+            <i class="pi pi-share-alt" style="font-size: 0.6rem" />
+            upstream
+          </span>
         </template>
       </Column>
 
@@ -243,6 +251,20 @@ const rows = computed(() => dashboard.filteredRuns);
 .repo-link:hover {
   color: var(--p-primary-300);
   text-decoration: underline;
+}
+
+.upstream-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: var(--p-primary-400);
+  background: color-mix(in srgb, var(--p-primary-500) 12%, transparent);
+  padding: 0.05rem 0.35rem;
+  border-radius: 4px;
+  margin-left: 0.35rem;
+  white-space: nowrap;
 }
 
 .branch-chip {
