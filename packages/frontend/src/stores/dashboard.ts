@@ -101,6 +101,20 @@ export const useDashboardStore = defineStore(
           const auth = useAuthStore();
           const actor = auth.user?.login;
           if (actor) {
+            // Ensure repo metadata is loaded for all owners of the selected repos
+            // (selectedRepos may be restored from persistence before fetchRepos is called)
+            const selectedOwners = [
+              ...new Set(
+                selectedRepos.value.map((r) => r.split("/")[0]).filter(Boolean)
+              ),
+            ];
+            const missingOwners = selectedOwners.filter(
+              (owner) => !reposByOrg.value[owner]
+            );
+            if (missingOwners.length) {
+              await Promise.all(missingOwners.map((owner) => fetchRepos(owner)));
+            }
+
             const allRepos = Object.values(reposByOrg.value).flat();
             const selectedSet = new Set(selectedRepos.value);
             const upstreamEntries: string[] = [];

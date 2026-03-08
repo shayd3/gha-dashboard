@@ -142,7 +142,7 @@ function toggleRepoSelection(fullName: string) {
                   <i
                     v-if="repo.isFork && !repo.parent"
                     class="pi pi-share-alt repo-fork"
-                    title="Fork — upstream runs are fetched automatically"
+                    title="Fork — upstream runs may be unavailable until the upstream repository is detected"
                   />
                   <i
                     v-if="repo.private"

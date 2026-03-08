@@ -379,5 +379,46 @@ describe("Workflow routes", () => {
       // Only the regular repo call, not the malformed upstream
       expect(mockListWorkflowRunsForRepo).toHaveBeenCalledTimes(1);
     });
+
+    it("annotates cached upstream runs with the correct forkRepoFullName per request", async () => {
+      const regularRun = makeRun({ id: 100, name: "Fork CI" });
+      const upstreamRun = makeRun({ id: 300, name: "Upstream CI" });
+
+      // First request fetches user/fork-a (direct) and upstream-org/shared-upstream (upstream).
+      // Second request fetches user/fork-b (direct) but hits cache for the upstream.
+      mockListWorkflowRunsForRepo
+        .mockResolvedValueOnce({ data: { workflow_runs: [regularRun] } }) // user/fork-a direct
+        .mockResolvedValueOnce({ data: { workflow_runs: [upstreamRun] } }) // upstream (first fetch)
+        .mockResolvedValue({ data: { workflow_runs: [regularRun] } }); // user/fork-b direct
+
+      const cookie = await sessionCookie();
+
+      // First request: fork-a -> upstream-org/shared-upstream
+      const res1 = await app.inject({
+        method: "GET",
+        url: "/api/runs?repos=user/fork-a&upstream_repos=upstream-org/shared-upstream:alice:user/fork-a",
+        headers: { cookie },
+      });
+      expect(res1.statusCode).toBe(200);
+      const body1 = res1.json<{ id: number; isUpstreamRun?: boolean; forkRepoFullName?: string }[]>();
+      const upstreamResult1 = body1.find((r) => r.isUpstreamRun);
+      expect(upstreamResult1?.forkRepoFullName).toBe("user/fork-a");
+
+      // Second request: fork-b -> same upstream (upstream served from cache)
+      const res2 = await app.inject({
+        method: "GET",
+        url: "/api/runs?repos=user/fork-b&upstream_repos=upstream-org/shared-upstream:alice:user/fork-b",
+        headers: { cookie },
+      });
+      expect(res2.statusCode).toBe(200);
+      const body2 = res2.json<{ id: number; isUpstreamRun?: boolean; forkRepoFullName?: string }[]>();
+      const upstreamResult2 = body2.find((r) => r.isUpstreamRun);
+      // Must be annotated with fork-b, not the previously cached fork-a
+      expect(upstreamResult2?.forkRepoFullName).toBe("user/fork-b");
+
+      // GitHub API called 3 times: fork-a direct, upstream (once), fork-b direct
+      // The upstream call is NOT repeated for fork-b because of the shared cache
+      expect(mockListWorkflowRunsForRepo).toHaveBeenCalledTimes(3);
+    });
   });
 });
