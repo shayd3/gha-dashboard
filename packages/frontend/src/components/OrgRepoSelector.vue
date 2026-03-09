@@ -136,11 +136,28 @@ function toggleRepoSelection(fullName: string) {
                 @click.stop
                 @change="toggleRepoSelection(repo.fullName)"
               />
-              <span class="repo-name">{{ repo.name }}</span>
-              <i
-                v-if="repo.private"
-                class="pi pi-lock repo-lock"
-              />
+              <div class="repo-info">
+                <div class="repo-name-row">
+                  <span class="repo-name">{{ repo.name }}</span>
+                  <i
+                    v-if="repo.isFork && !repo.parent"
+                    class="pi pi-share-alt repo-fork"
+                    title="Fork — upstream runs may be unavailable until the upstream repository is detected"
+                  />
+                  <i
+                    v-if="repo.private"
+                    class="pi pi-lock repo-lock"
+                  />
+                </div>
+                <span
+                  v-if="repo.isFork && repo.parent"
+                  class="repo-fork-badge"
+                  :title="`Fork of ${repo.parent.fullName} — upstream runs are fetched automatically`"
+                >
+                  <i class="pi pi-share-alt" style="font-size: 0.55rem" />
+                  {{ repo.parent.fullName }}
+                </span>
+              </div>
             </li>
           </ul>
         </div>
@@ -283,7 +300,7 @@ function toggleRepoSelection(fullName: string) {
 
 .repo-item {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 0.5rem;
   padding: 0.3rem 0.25rem;
   cursor: pointer;
@@ -304,8 +321,44 @@ function toggleRepoSelection(fullName: string) {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  flex: 1;
   font-size: 0.8rem;
+}
+
+.repo-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.repo-name-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.repo-fork-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  font-size: 0.6rem;
+  color: var(--p-primary-400);
+  background: color-mix(in srgb, var(--p-primary-500) 10%, transparent);
+  padding: 0.05rem 0.3rem;
+  border-radius: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  width: fit-content;
+}
+
+.repo-fork {
+  font-size: 0.65rem;
+  color: var(--p-primary-400);
+  flex-shrink: 0;
 }
 
 .repo-lock {

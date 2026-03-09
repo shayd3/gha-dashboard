@@ -7,6 +7,7 @@ import type {
   DashboardFilters,
 } from "@gha-dashboard/shared";
 import { apiFetch } from "../composables/useApi.js";
+import { useAuthStore } from "./auth.js";
 
 export const useDashboardStore = defineStore(
   "dashboard",
@@ -92,9 +93,48 @@ export const useDashboardStore = defineStore(
 
       try {
         const reposParam = selectedRepos.value.join(",");
-        runs.value = await apiFetch<WorkflowRun[]>(
-          `/api/runs?repos=${encodeURIComponent(reposParam)}`
-        );
+        let url = `/api/runs?repos=${encodeURIComponent(reposParam)}`;
+
+        // Build upstream_repos param for fork repos
+        const includeUpstream = filters.value.includeUpstreamRuns !== false; // default true
+        if (includeUpstream) {
+          const auth = useAuthStore();
+          const actor = auth.user?.login;
+          if (actor) {
+            // Ensure repo metadata is loaded for all owners of the selected repos
+            // (selectedRepos may be restored from persistence before fetchRepos is called)
+            const selectedOwners = [
+              ...new Set(
+                selectedRepos.value.map((r) => r.split("/")[0]).filter(Boolean)
+              ),
+            ];
+            const missingOwners = selectedOwners.filter(
+              (owner) => !reposByOrg.value[owner]
+            );
+            if (missingOwners.length) {
+              await Promise.all(missingOwners.map((owner) => fetchRepos(owner)));
+            }
+
+            const allRepos = Object.values(reposByOrg.value).flat();
+            const selectedSet = new Set(selectedRepos.value);
+            const upstreamEntries: string[] = [];
+            for (const repoFullName of selectedRepos.value) {
+              const repo = allRepos.find((r) => r.fullName === repoFullName);
+              if (repo?.isFork && repo.parent) {
+                // Skip if the upstream repo is already directly selected
+                // (its runs are already being fetched, no need to duplicate)
+                if (selectedSet.has(repo.parent.fullName)) continue;
+                // Format: upstreamOwner/upstreamRepo:actor:forkOwner/forkRepo
+                upstreamEntries.push(`${repo.parent.fullName}:${actor}:${repo.fullName}`);
+              }
+            }
+            if (upstreamEntries.length) {
+              url += `&upstream_repos=${encodeURIComponent(upstreamEntries.join(","))}`;
+            }
+          }
+        }
+
+        runs.value = await apiFetch<WorkflowRun[]>(url);
         lastUpdated.value = new Date().toISOString();
       } catch (e) {
         error.value = e instanceof Error ? e.message : "Failed to fetch runs";

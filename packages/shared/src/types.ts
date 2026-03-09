@@ -12,6 +12,13 @@ export interface Organization {
   description: string | null;
 }
 
+export interface RepositoryParent {
+  fullName: string;
+  owner: string;
+  name: string;
+  defaultBranch: string;
+}
+
 export interface Repository {
   id: number;
   name: string;
@@ -20,6 +27,8 @@ export interface Repository {
   private: boolean;
   defaultBranch: string;
   url: string;
+  isFork?: boolean;
+  parent?: RepositoryParent;
 }
 
 export interface Workflow {
@@ -70,6 +79,8 @@ export interface WorkflowRun {
   runStartedAt: string;
   url: string;
   duration: number | null;
+  isUpstreamRun?: boolean;
+  forkRepoFullName?: string;
 }
 
 export interface PaginatedResponse<T> {
@@ -95,6 +106,7 @@ export interface DashboardFilters {
   branch: string | null;
   workflow: string | null;
   event: string | null;
+  includeUpstreamRuns?: boolean;
 }
 
 export interface View {

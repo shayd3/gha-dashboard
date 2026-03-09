@@ -6,6 +6,7 @@ Single pane of glass for monitoring GitHub Actions workflow statuses across mult
 
 - Monitor workflow runs across multiple orgs and repos in one view
 - Filter runs by status, branch, workflow name, or event
+- **Upstream fork runs** — when a selected repo is a fork, workflow runs from the upstream (parent) repo triggered by the authenticated user are automatically fetched and displayed inline with an "upstream" badge. This lets open-source contributors see CI results from upstream repos triggered by their PRs
 - **Named views** — save your current repo selection and filters as a named view, switch instantly from the sidebar, synced across devices via PostgreSQL
 - **Editable views** — modify a view's repos or filters by changing the dashboard while a view is active; a dirty indicator and "Save changes" button appear in the sidebar. Switching views while unsaved prompts to Save & Switch, Discard, or Cancel
 
@@ -93,7 +94,7 @@ deploy/helm/  Helm chart for K8s deployment
 | GET | `/api/orgs/:org/repos` | List repos in an org |
 | GET | `/api/repos/:owner/:repo/workflows` | List workflows for a repo |
 | GET | `/api/repos/:owner/:repo/runs` | List runs for a repo |
-| GET | `/api/runs?repos=org/repo1,org/repo2` | Aggregated runs across repos |
+| GET | `/api/runs?repos=org/repo1,org/repo2&upstream_repos=upstream/repo:actor:fork/repo` | Aggregated runs across repos (with optional upstream fork runs filtered by actor) |
 | GET | `/api/health` | Health check |
 | GET | `/api/views` | List saved views for the authenticated user |
 | POST | `/api/views` | Create a view (`{ name, repos, filters? }`) — 201 on success, 409 on duplicate name, 400 if over 20-view limit |
@@ -143,6 +144,7 @@ In-memory TTL cache (no external dependencies for MVP):
 
 - Orgs/repos: 5 min
 - Workflow runs: 60 sec
+- Upstream fork runs: 60 sec (keyed by upstream repo + actor)
 
 Cache is per-user, keyed by `userId:endpoint`.
 
