@@ -24,6 +24,7 @@ services:
     environment:
       - NODE_ENV=production
       - FRONTEND_URL=http://localhost
+      - CORS_ORIGIN=http://localhost
       - DATABASE_URL=postgresql://gha:gha@db:5432/gha_dashboard
     depends_on:
       db:

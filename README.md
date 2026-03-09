@@ -84,7 +84,8 @@ deploy/helm/  Helm chart for K8s deployment
 | `GITHUB_APP_ID` | No | GitHub App numeric ID (reserved for future installation-token features) |
 | `GITHUB_APP_PRIVATE_KEY` | No | GitHub App PEM private key (reserved for future installation-token features) |
 | `GITHUB_API_URL` | No | GitHub Enterprise API endpoint (default: `https://api.github.com`) |
-| `CORS_ORIGIN` | No | Allowed origin for CORS (default: `http://localhost:5173`) |
+| `FRONTEND_URL` | No | Where the frontend is served (for OAuth callback & redirect). Default: `http://localhost:5173`. Docker Compose: `http://localhost`. Production: `https://your-domain.com` |
+| `CORS_ORIGIN` | No | Allowed origin for CORS — should match `FRONTEND_URL` (default: `http://localhost:5173`) |
 | `PORT` | No | Backend port (default: `3000`) |
 
 ## API Routes
