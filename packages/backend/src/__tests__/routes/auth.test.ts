@@ -25,11 +25,20 @@ vi.mock("octokit", () => ({
 // ------------------------------------------------------------------
 // Helpers
 // ------------------------------------------------------------------
-function mockFetchTokenSuccess(accessToken = "ghp_test123") {
+function mockFetchTokenSuccess(
+  accessToken = "ghp_test123",
+  refreshToken = "ghr_refresh123",
+  expiresIn = 28800
+) {
   vi.stubGlobal(
     "fetch",
     vi.fn().mockResolvedValue({
-      json: () => Promise.resolve({ access_token: accessToken }),
+      json: () =>
+        Promise.resolve({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+          expires_in: expiresIn,
+        }),
     })
   );
 }
@@ -41,6 +50,25 @@ function mockFetchTokenFailure() {
       json: () => Promise.resolve({ error: "bad_verification_code" }),
     })
   );
+}
+
+/**
+ * Perform the login redirect to get a valid state cookie,
+ * then return the state value and cookie header string.
+ */
+async function getStateCookie(app: FastifyInstance) {
+  const loginRes = await app.inject({ method: "GET", url: "/api/auth/login" });
+  const location = loginRes.headers["location"] as string;
+  const stateParam = new URL(location).searchParams.get("state")!;
+  const setCookie = loginRes.headers["set-cookie"] as string;
+  // Extract the gha_oauth_state cookie
+  const stateCookieMatch = (
+    Array.isArray(setCookie) ? setCookie.join("; ") : setCookie
+  ).match(/gha_oauth_state=([^;]+)/);
+  const stateCookie = stateCookieMatch
+    ? `gha_oauth_state=${stateCookieMatch[1]}`
+    : "";
+  return { stateParam, stateCookie };
 }
 
 // ------------------------------------------------------------------
@@ -73,22 +101,32 @@ describe("Auth routes", () => {
       expect(location).toContain("github.com/login/oauth/authorize");
     });
 
-    it("includes the client_id and required scopes in the redirect URL", async () => {
-      const previousClientId = process.env.GITHUB_CLIENT_ID;
+    it("includes the client_id and state in the redirect URL (no scope param)", async () => {
+      const previousClientId = process.env.GITHUB_APP_CLIENT_ID;
       try {
-        process.env.GITHUB_CLIENT_ID = "my-client-id";
+        process.env.GITHUB_APP_CLIENT_ID = "my-app-client-id";
         const res = await app.inject({ method: "GET", url: "/api/auth/login" });
         const location = res.headers["location"] as string;
 
-        expect(location).toContain("client_id=my-client-id");
-        expect(location).toContain("scope=repo+read%3Aorg");
+        expect(location).toContain("client_id=my-app-client-id");
+        expect(location).toContain("state=");
+        // GitHub App — no scope param
+        expect(location).not.toContain("scope=");
       } finally {
         if (previousClientId === undefined) {
-          delete process.env.GITHUB_CLIENT_ID;
+          delete process.env.GITHUB_APP_CLIENT_ID;
         } else {
-          process.env.GITHUB_CLIENT_ID = previousClientId;
+          process.env.GITHUB_APP_CLIENT_ID = previousClientId;
         }
       }
+    });
+
+    it("sets an OAuth state cookie for CSRF protection", async () => {
+      const res = await app.inject({ method: "GET", url: "/api/auth/login" });
+      const setCookie = res.headers["set-cookie"] as string;
+      const cookies = Array.isArray(setCookie) ? setCookie : [setCookie ?? ""];
+      const stateCookie = cookies.find((c) => c.includes("gha_oauth_state"));
+      expect(stateCookie).toBeDefined();
     });
   });
 
@@ -105,11 +143,34 @@ describe("Auth routes", () => {
       expect(res.json()).toMatchObject({ error: "Missing code parameter" });
     });
 
-    it("returns 400 when GitHub token exchange returns an error", async () => {
-      mockFetchTokenFailure();
+    it("returns 400 when the state param is missing or doesn't match", async () => {
+      mockFetchTokenSuccess();
+      const { stateCookie } = await getStateCookie(app);
       const res = await app.inject({
         method: "GET",
-        url: "/api/auth/callback?code=badcode",
+        url: "/api/auth/callback?code=validcode&state=wrong-state",
+        headers: { cookie: stateCookie },
+      });
+      expect(res.statusCode).toBe(400);
+      expect(res.json()).toMatchObject({ error: "Invalid OAuth state" });
+    });
+
+    it("returns 400 when no state cookie is present", async () => {
+      const res = await app.inject({
+        method: "GET",
+        url: "/api/auth/callback?code=validcode&state=some-state",
+      });
+      expect(res.statusCode).toBe(400);
+      expect(res.json()).toMatchObject({ error: "Invalid OAuth state" });
+    });
+
+    it("returns 400 when GitHub token exchange returns an error", async () => {
+      mockFetchTokenFailure();
+      const { stateParam, stateCookie } = await getStateCookie(app);
+      const res = await app.inject({
+        method: "GET",
+        url: `/api/auth/callback?code=badcode&state=${stateParam}`,
+        headers: { cookie: stateCookie },
       });
       expect(res.statusCode).toBe(400);
       expect(res.json()).toMatchObject({
@@ -118,19 +179,23 @@ describe("Auth routes", () => {
     });
 
     it("sets a session cookie and redirects on success", async () => {
-      mockFetchTokenSuccess("ghp_valid");
+      mockFetchTokenSuccess("ghp_valid", "ghr_refresh", 28800);
       mockGetAuthenticated.mockResolvedValue({
         data: { id: 99, login: "alice", avatar_url: "", name: "Alice" },
       });
 
+      const { stateParam, stateCookie } = await getStateCookie(app);
       const res = await app.inject({
         method: "GET",
-        url: "/api/auth/callback?code=validcode",
+        url: `/api/auth/callback?code=validcode&state=${stateParam}`,
+        headers: { cookie: stateCookie },
       });
 
       expect(res.statusCode).toBe(302);
-      const setCookie = res.headers["set-cookie"] as string;
-      expect(setCookie).toMatch(/gha_session=/);
+      const setCookie = res.headers["set-cookie"];
+      const cookies = Array.isArray(setCookie) ? setCookie : [setCookie ?? ""];
+      const sessionCookieSet = cookies.some((c) => c.includes("gha_session="));
+      expect(sessionCookieSet).toBe(true);
     });
   });
 

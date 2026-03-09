@@ -9,6 +9,8 @@ export const DEFAULT_SESSION: SessionPayload = {
   githubToken: "test-github-token",
   userId: 42,
   login: "testuser",
+  refreshToken: "test-refresh-token",
+  tokenExpiresAt: Date.now() + 8 * 60 * 60 * 1000, // 8h from now
 };
 
 /**

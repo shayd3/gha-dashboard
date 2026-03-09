@@ -39,8 +39,11 @@ ingress:
     secretName: gha-dashboard-tls
 
 github:
-  clientId: ""
-  clientSecret: ""
+  appClientId: ""
+  appClientSecret: ""
+  # Optional: needed for future installation-token features (shareable views)
+  appId: ""
+  appPrivateKey: ""
   apiUrl: "https://api.github.com"
 
 jwt:

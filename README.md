@@ -14,7 +14,7 @@ Single pane of glass for monitoring GitHub Actions workflow statuses across mult
 
 - **Frontend**: Vue 3, Vite, PrimeVue, Pinia
 - **Backend**: Fastify, octokit
-- **Auth**: GitHub OAuth with JWT session cookies
+- **Auth**: GitHub App (user-to-server OAuth) with JWT session cookies
 - **Database**: PostgreSQL (views persistence)
 - **Shared**: TypeScript types across frontend/backend
 - **Deployment**: Docker, Helm
@@ -25,7 +25,7 @@ Monorepo managed with pnpm workspaces (`packages/shared`, `packages/backend`, `p
 
 - Node.js 20+
 - pnpm 10+
-- A [GitHub OAuth App](https://github.com/settings/developers) with callback URL `http://localhost:5173/api/auth/callback` (for local dev)
+- A [GitHub App](https://github.com/settings/apps) (see **GitHub App Setup** below)
 - PostgreSQL 14+ (optional — for views persistence; without it, views are in-memory only)
 
 ## Setup
@@ -37,11 +37,14 @@ cp .env.example .env
 Fill in your `.env`:
 
 ```
-GITHUB_CLIENT_ID=...
-GITHUB_CLIENT_SECRET=...
+GITHUB_APP_CLIENT_ID=...
+GITHUB_APP_CLIENT_SECRET=...
 JWT_SECRET=<random-string>
 # Optional: omit to use in-memory view storage (not persisted across restarts)
 DATABASE_URL=postgresql://gha:gha@localhost:5432/gha_dashboard
+# Optional: for future installation-token features
+# GITHUB_APP_ID=...
+# GITHUB_APP_PRIVATE_KEY=...
 ```
 
 Start a local Postgres instance (or use the Docker Compose service):
@@ -74,10 +77,12 @@ deploy/helm/  Helm chart for K8s deployment
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `GITHUB_CLIENT_ID` | Yes | GitHub OAuth App client ID |
-| `GITHUB_CLIENT_SECRET` | Yes | GitHub OAuth App client secret |
+| `GITHUB_APP_CLIENT_ID` | Yes | GitHub App client ID |
+| `GITHUB_APP_CLIENT_SECRET` | Yes | GitHub App client secret |
 | `JWT_SECRET` | Yes | Random string for signing JWT session cookies |
 | `DATABASE_URL` | No | PostgreSQL connection string, e.g. `postgresql://user:pass@localhost:5432/gha_dashboard`. If not set, views are stored in-memory only (not persisted across restarts) and a warning is logged. |
+| `GITHUB_APP_ID` | No | GitHub App numeric ID (reserved for future installation-token features) |
+| `GITHUB_APP_PRIVATE_KEY` | No | GitHub App PEM private key (reserved for future installation-token features) |
 | `GITHUB_API_URL` | No | GitHub Enterprise API endpoint (default: `https://api.github.com`) |
 | `CORS_ORIGIN` | No | Allowed origin for CORS (default: `http://localhost:5173`) |
 | `PORT` | No | Backend port (default: `3000`) |
@@ -117,8 +122,8 @@ The `db` service runs PostgreSQL 16 and exposes no ports externally. The backend
 
 ```bash
 helm install gha-dashboard ./deploy/helm/gha-dashboard \
-  --set github.clientId=YOUR_ID \
-  --set github.clientSecret=YOUR_SECRET \
+  --set github.appClientId=YOUR_APP_CLIENT_ID \
+  --set github.appClientSecret=YOUR_APP_CLIENT_SECRET \
   --set jwt.secret=YOUR_JWT_SECRET \
   --set database.url='postgresql://user:pass@your-postgres-host:5432/gha_dashboard' \
   --set ingress.host=gha-dashboard.your-domain.com
@@ -148,6 +153,19 @@ In-memory TTL cache (no external dependencies for MVP):
 
 Cache is per-user, keyed by `userId:endpoint`.
 
+## GitHub App Setup
+
+1. Go to **Settings → Developer settings → GitHub Apps → New GitHub App**
+2. Set the **Callback URL** to `http://localhost:5173/api/auth/callback` (for local dev) or your production URL
+3. Under **Permissions**:
+   - Repository: **Actions** → Read-only, **Metadata** → Read-only (auto-selected)
+   - Organization: **Members** → Read-only
+4. After creating the app, note the **Client ID** and generate a **Client secret**
+   - User-to-server token expiration is enabled by default for new GitHub Apps — the dashboard handles refresh automatically
+6. Install the app on the organizations/accounts whose repos you want to monitor
+
+> **Note:** Users will only see repos at the intersection of "repos they personally have access to" and "repos where the GitHub App is installed." This is more secure than a blanket OAuth scope.
+
 ## GitHub Enterprise
 
-Set `GITHUB_API_URL` in your `.env` to your GHE API endpoint (e.g. `https://github.yourcompany.com/api/v3`).
+Set `GITHUB_API_URL` in your `.env` to your GHE API endpoint (e.g. `https://github.yourcompany.com/api/v3`). GitHub EMU (Enterprise Managed Users) on github.com is also supported.
