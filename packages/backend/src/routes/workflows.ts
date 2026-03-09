@@ -70,22 +70,34 @@ export const workflowRoutes: FastifyPluginAsync = async (fastify) => {
       const cached = fastify.cache.get<Workflow[]>(cacheKey);
       if (cached) return cached;
 
-      const { data } = await request.octokit.rest.actions.listRepoWorkflows({
-        owner,
-        repo,
-        per_page: 100,
-      });
+      try {
+        const { data } = await request.octokit.rest.actions.listRepoWorkflows({
+          owner,
+          repo,
+          per_page: 100,
+        });
 
-      const workflows: Workflow[] = data.workflows.map((w) => ({
-        id: w.id,
-        name: w.name,
-        path: w.path,
-        state: w.state as Workflow["state"],
-        repoFullName: `${owner}/${repo}`,
-      }));
+        const workflows: Workflow[] = data.workflows.map((w) => ({
+          id: w.id,
+          name: w.name,
+          path: w.path,
+          state: w.state as Workflow["state"],
+          repoFullName: `${owner}/${repo}`,
+        }));
 
-      fastify.cache.set(cacheKey, workflows, WORKFLOW_CACHE_TTL);
-      return workflows;
+        fastify.cache.set(cacheKey, workflows, WORKFLOW_CACHE_TTL);
+        return workflows;
+      } catch (err) {
+        const status = (err as { status?: number }).status;
+        if (status === 404 || status === 403) {
+          fastify.log.warn(
+            { err, repo: `${owner}/${repo}` },
+            "Cannot access workflows — the GitHub App may not be installed on this repo or Actions may be disabled"
+          );
+          return [];
+        }
+        throw err;
+      }
     }
   );
 
@@ -105,23 +117,35 @@ export const workflowRoutes: FastifyPluginAsync = async (fastify) => {
     const cached = fastify.cache.get<WorkflowRun[]>(cacheKey);
     if (cached) return cached;
 
-    const { data } = await request.octokit.rest.actions.listWorkflowRunsForRepo(
-      {
-        owner,
-        repo,
-        per_page: perPage,
-        ...(branch ? { branch } : {}),
-        ...(status ? { status: status as "completed" | "queued" | "in_progress" } : {}),
-        ...(actor ? { actor } : {}),
+    try {
+      const { data } = await request.octokit.rest.actions.listWorkflowRunsForRepo(
+        {
+          owner,
+          repo,
+          per_page: perPage,
+          ...(branch ? { branch } : {}),
+          ...(status ? { status: status as "completed" | "queued" | "in_progress" } : {}),
+          ...(actor ? { actor } : {}),
+        }
+      );
+
+      const runs = data.workflow_runs.map((r) =>
+        mapRun(r as unknown as Record<string, unknown>, `${owner}/${repo}`)
+      );
+
+      fastify.cache.set(cacheKey, runs, RUNS_CACHE_TTL);
+      return runs;
+    } catch (err) {
+      const status = (err as { status?: number }).status;
+      if (status === 404 || status === 403) {
+        fastify.log.warn(
+          { err, repo: `${owner}/${repo}` },
+          "Cannot access runs — the GitHub App may not be installed on this repo or Actions may be disabled"
+        );
+        return [];
       }
-    );
-
-    const runs = data.workflow_runs.map((r) =>
-      mapRun(r as unknown as Record<string, unknown>, `${owner}/${repo}`)
-    );
-
-    fastify.cache.set(cacheKey, runs, RUNS_CACHE_TTL);
-    return runs;
+      throw err;
+    }
   });
 
   // Aggregated runs across multiple repos (with optional upstream fork support)
