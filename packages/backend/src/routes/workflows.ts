@@ -136,8 +136,8 @@ export const workflowRoutes: FastifyPluginAsync = async (fastify) => {
       fastify.cache.set(cacheKey, runs, RUNS_CACHE_TTL);
       return runs;
     } catch (err) {
-      const status = (err as { status?: number }).status;
-      if (status === 404 || status === 403) {
+      const errStatus = (err as { status?: number }).status;
+      if (errStatus === 404 || errStatus === 403) {
         fastify.log.warn(
           { err, repo: `${owner}/${repo}` },
           "Cannot access runs — the GitHub App may not be installed on this repo or Actions may be disabled"

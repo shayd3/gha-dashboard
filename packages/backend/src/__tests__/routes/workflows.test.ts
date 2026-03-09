@@ -108,6 +108,50 @@ describe("Workflow routes", () => {
 
       expect(mockListRepoWorkflows).toHaveBeenCalledTimes(1);
     });
+
+    it("returns empty array when GitHub API returns 404", async () => {
+      const err = Object.assign(new Error("Not Found"), { status: 404 });
+      mockListRepoWorkflows.mockRejectedValue(err);
+
+      const cookie = await sessionCookie();
+      const res = await app.inject({
+        method: "GET",
+        url: "/api/repos/my-org/my-repo/workflows",
+        headers: { cookie },
+      });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toEqual([]);
+    });
+
+    it("returns empty array when GitHub API returns 403", async () => {
+      const err = Object.assign(new Error("Forbidden"), { status: 403 });
+      mockListRepoWorkflows.mockRejectedValue(err);
+
+      const cookie = await sessionCookie();
+      const res = await app.inject({
+        method: "GET",
+        url: "/api/repos/my-org/my-repo/workflows",
+        headers: { cookie },
+      });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toEqual([]);
+    });
+
+    it("re-throws non-404/403 errors from GitHub API", async () => {
+      const err = Object.assign(new Error("Internal Server Error"), { status: 500 });
+      mockListRepoWorkflows.mockRejectedValue(err);
+
+      const cookie = await sessionCookie();
+      const res = await app.inject({
+        method: "GET",
+        url: "/api/repos/my-org/my-repo/workflows",
+        headers: { cookie },
+      });
+
+      expect(res.statusCode).toBe(500);
+    });
   });
 
   // ----------------------------------------------------------------
@@ -217,6 +261,50 @@ describe("Workflow routes", () => {
           actor: "alice",
         })
       );
+    });
+
+    it("returns empty array when GitHub API returns 404", async () => {
+      const err = Object.assign(new Error("Not Found"), { status: 404 });
+      mockListWorkflowRunsForRepo.mockRejectedValue(err);
+
+      const cookie = await sessionCookie();
+      const res = await app.inject({
+        method: "GET",
+        url: "/api/repos/my-org/my-repo/runs",
+        headers: { cookie },
+      });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toEqual([]);
+    });
+
+    it("returns empty array when GitHub API returns 403", async () => {
+      const err = Object.assign(new Error("Forbidden"), { status: 403 });
+      mockListWorkflowRunsForRepo.mockRejectedValue(err);
+
+      const cookie = await sessionCookie();
+      const res = await app.inject({
+        method: "GET",
+        url: "/api/repos/my-org/my-repo/runs",
+        headers: { cookie },
+      });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toEqual([]);
+    });
+
+    it("re-throws non-404/403 errors from GitHub API", async () => {
+      const err = Object.assign(new Error("Internal Server Error"), { status: 500 });
+      mockListWorkflowRunsForRepo.mockRejectedValue(err);
+
+      const cookie = await sessionCookie();
+      const res = await app.inject({
+        method: "GET",
+        url: "/api/repos/my-org/my-repo/runs",
+        headers: { cookie },
+      });
+
+      expect(res.statusCode).toBe(500);
     });
   });
 
