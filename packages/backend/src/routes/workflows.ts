@@ -186,35 +186,40 @@ export const workflowRoutes: FastifyPluginAsync = async (fastify) => {
             const [owner, repo] = upstreamFullName.split("/");
             if (!owner || !repo || !actor) return [];
 
+            // Cache un-annotated runs (no forkRepoFullName) so the same entry
+            // can be reused when multiple forks share the same upstream + actor.
             const cacheKey = `${request.session.userId}:runs:${upstreamFullName}:upstream:${actor}:${perPage}`;
-            const cached = fastify.cache.get<WorkflowRun[]>(cacheKey);
-            if (cached) return cached;
+            let baseRuns = fastify.cache.get<WorkflowRun[]>(cacheKey);
 
-            try {
-              const { data } =
-                await request.octokit.rest.actions.listWorkflowRunsForRepo({
-                  owner,
-                  repo,
-                  per_page: perPage,
-                  actor,
-                });
+            if (!baseRuns) {
+              try {
+                const { data } =
+                  await request.octokit.rest.actions.listWorkflowRunsForRepo({
+                    owner,
+                    repo,
+                    per_page: perPage,
+                    actor,
+                  });
 
-              const runs = data.workflow_runs.map((r) =>
-                mapRun(
-                  r as unknown as Record<string, unknown>,
-                  upstreamFullName,
-                  { isUpstreamRun: true, forkRepoFullName: forkFullName }
-                )
-              );
-              fastify.cache.set(cacheKey, runs, RUNS_CACHE_TTL);
-              return runs;
-            } catch (err) {
-              fastify.log.warn(
-                { err, upstream: upstreamFullName, actor },
-                "Failed to fetch upstream runs"
-              );
-              return [];
+                baseRuns = data.workflow_runs.map((r) =>
+                  mapRun(
+                    r as unknown as Record<string, unknown>,
+                    upstreamFullName,
+                    { isUpstreamRun: true }
+                  )
+                );
+                fastify.cache.set(cacheKey, baseRuns, RUNS_CACHE_TTL);
+              } catch (err) {
+                fastify.log.warn(
+                  { err, upstream: upstreamFullName, actor },
+                  "Failed to fetch upstream runs"
+                );
+                return [];
+              }
             }
+
+            // Annotate with the requesting fork's name (not stored in cache)
+            return baseRuns.map((r) => ({ ...r, forkRepoFullName: forkFullName }));
           })
         );
       }
