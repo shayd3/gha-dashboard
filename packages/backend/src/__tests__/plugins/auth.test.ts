@@ -6,6 +6,51 @@ import {
 import { buildApp } from "../helpers.js";
 import type { FastifyInstance } from "fastify";
 
+// ------------------------------------------------------------------
+// JWT_SECRET production startup validation
+// ------------------------------------------------------------------
+describe("JWT_SECRET production validation", () => {
+  it("throws during plugin startup in production when JWT_SECRET is not set", async () => {
+    const prevNodeEnv = process.env.NODE_ENV;
+    const prevJwtSecret = process.env.JWT_SECRET;
+    try {
+      process.env.NODE_ENV = "production";
+      delete process.env.JWT_SECRET;
+      await expect(buildApp()).rejects.toThrow(
+        "JWT_SECRET environment variable is required in production"
+      );
+    } finally {
+      process.env.NODE_ENV = prevNodeEnv;
+      if (prevJwtSecret !== undefined) {
+        process.env.JWT_SECRET = prevJwtSecret;
+      } else {
+        delete process.env.JWT_SECRET;
+      }
+    }
+  });
+
+  it("uses the dev fallback when JWT_SECRET is unset in non-production", async () => {
+    const prevNodeEnv = process.env.NODE_ENV;
+    const prevJwtSecret = process.env.JWT_SECRET;
+    let app: FastifyInstance | undefined;
+    try {
+      process.env.NODE_ENV = "test";
+      delete process.env.JWT_SECRET;
+      app = await buildApp();
+      // Plugin registered successfully — no error thrown
+      expect(app).toBeDefined();
+    } finally {
+      await app?.close();
+      process.env.NODE_ENV = prevNodeEnv;
+      if (prevJwtSecret !== undefined) {
+        process.env.JWT_SECRET = prevJwtSecret;
+      } else {
+        delete process.env.JWT_SECRET;
+      }
+    }
+  });
+});
+
 describe("createSessionToken / verifySessionToken", () => {
   it("round-trips a payload correctly", async () => {
     const payload = {
