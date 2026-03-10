@@ -134,6 +134,44 @@ helm install gha-dashboard ./deploy/helm/gha-dashboard \
 
 See `deploy/helm/gha-dashboard/values.yaml` for all configurable values (replicas, resources, TLS, GitHub Enterprise API URL, etc).
 
+## CI And Release Automation
+
+The repository includes two GitHub Actions workflows:
+
+- `CI` runs on pushes to `main`, pull requests targeting `main`, and manual dispatch. It installs dependencies, typechecks the workspace, runs the backend test suite with coverage, and builds all packages.
+- `Release` runs when you push a Git tag matching `v*` (for example `v1.0.1`). It re-runs verification, builds and pushes backend/frontend Docker images to GHCR, packages the Helm chart, publishes it to GHCR as an OCI artifact, and creates a GitHub Release with the chart attached.
+
+To cut a release:
+
+```bash
+git tag -a v1.0.1 -m "v1.0.1"
+git push origin v1.0.1
+```
+
+By default, images are published to:
+
+- `ghcr.io/<owner>/gha-dashboard-backend`
+- `ghcr.io/<owner>/gha-dashboard-frontend`
+
+The Helm chart is published to:
+
+- `oci://ghcr.io/<owner>/charts/gha-dashboard`
+
+Users can install from the OCI registry directly:
+
+```bash
+helm registry login ghcr.io
+helm install gha-dashboard oci://ghcr.io/<owner>/charts/gha-dashboard \
+  --version 1.0.0 \
+  --set github.appClientId=YOUR_APP_CLIENT_ID \
+  --set github.appClientSecret=YOUR_APP_CLIENT_SECRET \
+  --set jwt.secret=YOUR_JWT_SECRET \
+  --set database.url='postgresql://user:pass@host:5432/gha_dashboard' \
+  --set ingress.host=gha-dashboard.example.com
+```
+
+If you prefer, the GitHub Release assets page still includes the packaged chart `.tgz` for manual download and installation.
+
 ## Data Persistence
 
 Views are stored in PostgreSQL in the `views` table. The table is created automatically on backend startup via an idempotent `CREATE TABLE IF NOT EXISTS` migration — no migration tool is required.
