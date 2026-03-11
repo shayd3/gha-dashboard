@@ -149,6 +149,9 @@ export async function refreshGitHubToken(
 const REFRESH_WINDOW_MS = 5 * 60 * 1000; // refresh 5 min before expiry
 
 const plugin: FastifyPluginAsync = async (fastify) => {
+  // Fail fast: validate JWT_SECRET is present in production before accepting requests
+  JWT_SECRET_RAW();
+
   fastify.decorateRequest("session", undefined as unknown as SessionPayload);
   fastify.decorateRequest("octokit", undefined as unknown as Octokit);
 
