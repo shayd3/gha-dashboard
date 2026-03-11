@@ -84,7 +84,8 @@ deploy/helm/  Helm chart for K8s deployment
 | `GITHUB_APP_ID` | No | GitHub App numeric ID (reserved for future installation-token features) |
 | `GITHUB_APP_PRIVATE_KEY` | No | GitHub App PEM private key (reserved for future installation-token features) |
 | `GITHUB_API_URL` | No | GitHub Enterprise API endpoint (default: `https://api.github.com`) |
-| `CORS_ORIGIN` | No | Allowed origin for CORS (default: `http://localhost:5173`) |
+| `FRONTEND_URL` | No | Where the frontend is served (for OAuth callback & redirect). Default: `http://localhost:5173`. Docker Compose: `http://localhost`. Production: `https://your-domain.com` |
+| `CORS_ORIGIN` | No | Allowed origin for CORS — should match `FRONTEND_URL` (default: `http://localhost:5173`) |
 | `PORT` | No | Backend port (default: `3000`) |
 
 ## API Routes
@@ -132,6 +133,44 @@ helm install gha-dashboard ./deploy/helm/gha-dashboard \
 `database.url` is stored in the Kubernetes Secret alongside other credentials. For production, use a managed PostgreSQL service (RDS, Cloud SQL, Azure Database, etc.) and set `database.url` to its connection string. If `database.url` is left empty, the backend falls back to in-memory view storage.
 
 See `deploy/helm/gha-dashboard/values.yaml` for all configurable values (replicas, resources, TLS, GitHub Enterprise API URL, etc).
+
+## CI And Release Automation
+
+The repository includes two GitHub Actions workflows:
+
+- `CI` runs on pushes to `main`, pull requests targeting `main`, and manual dispatch. It installs dependencies, typechecks the workspace, runs the backend test suite with coverage, and builds all packages.
+- `Release` runs when you push a Git tag matching `v*` (for example `v1.0.1`). It re-runs verification, builds and pushes backend/frontend Docker images to GHCR, packages the Helm chart, publishes it to GHCR as an OCI artifact, and creates a GitHub Release with the chart attached.
+
+To cut a release:
+
+```bash
+git tag -a v1.0.1 -m "v1.0.1"
+git push origin v1.0.1
+```
+
+By default, images are published to:
+
+- `ghcr.io/<owner>/gha-dashboard-backend`
+- `ghcr.io/<owner>/gha-dashboard-frontend`
+
+The Helm chart is published to:
+
+- `oci://ghcr.io/<owner>/charts/gha-dashboard`
+
+Users can install from the OCI registry directly:
+
+```bash
+helm registry login ghcr.io
+helm install gha-dashboard oci://ghcr.io/<owner>/charts/gha-dashboard \
+  --version 1.0.0 \
+  --set github.appClientId=YOUR_APP_CLIENT_ID \
+  --set github.appClientSecret=YOUR_APP_CLIENT_SECRET \
+  --set jwt.secret=YOUR_JWT_SECRET \
+  --set database.url='postgresql://user:pass@host:5432/gha_dashboard' \
+  --set ingress.host=gha-dashboard.example.com
+```
+
+If you prefer, the GitHub Release assets page still includes the packaged chart `.tgz` for manual download and installation.
 
 ## Data Persistence
 

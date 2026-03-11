@@ -1,5 +1,6 @@
 {
   "name": "gha-dashboard",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "dev": "concurrently -n backend,frontend -c blue,green \"pnpm --filter backend dev\" \"pnpm --filter frontend dev\"",

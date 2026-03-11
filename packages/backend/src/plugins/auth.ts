@@ -3,7 +3,13 @@ import fp from "fastify-plugin";
 import { SignJWT, jwtVerify } from "jose";
 import { Octokit } from "octokit";
 
-const JWT_SECRET_RAW = () => process.env.JWT_SECRET || "dev-secret-change-me";
+const JWT_SECRET_RAW = () => {
+  const secret = process.env.JWT_SECRET;
+  if (!secret && process.env.NODE_ENV === "production") {
+    throw new Error("JWT_SECRET environment variable is required in production");
+  }
+  return secret || "dev-secret-change-me";
+};
 const JWT_SECRET = () => new TextEncoder().encode(JWT_SECRET_RAW());
 const COOKIE_NAME = "gha_session";
 const OAUTH_STATE_COOKIE = "gha_oauth_state";
@@ -143,6 +149,9 @@ export async function refreshGitHubToken(
 const REFRESH_WINDOW_MS = 5 * 60 * 1000; // refresh 5 min before expiry
 
 const plugin: FastifyPluginAsync = async (fastify) => {
+  // Fail fast: validate JWT_SECRET is present in production before accepting requests
+  JWT_SECRET_RAW();
+
   fastify.decorateRequest("session", undefined as unknown as SessionPayload);
   fastify.decorateRequest("octokit", undefined as unknown as Octokit);
 
