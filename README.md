@@ -150,18 +150,18 @@ git push origin v1.0.1
 
 By default, images are published to:
 
-- `ghcr.io/<owner>/gha-dashboard-backend`
-- `ghcr.io/<owner>/gha-dashboard-frontend`
+- `ghcr.io/shayd3/gha-dashboard-backend`
+- `ghcr.io/shayd3/gha-dashboard-frontend`
 
 The Helm chart is published to:
 
-- `oci://ghcr.io/<owner>/charts/gha-dashboard`
+- `oci://ghcr.io/shayd3/charts/gha-dashboard`
 
 Users can install from the OCI registry directly:
 
 ```bash
 helm registry login ghcr.io
-helm install gha-dashboard oci://ghcr.io/<owner>/charts/gha-dashboard \
+helm install gha-dashboard oci://ghcr.io/shayd3/charts/gha-dashboard \
   --version 1.0.0 \
   --set github.appClientId=YOUR_APP_CLIENT_ID \
   --set github.appClientSecret=YOUR_APP_CLIENT_SECRET \

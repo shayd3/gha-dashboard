@@ -1,8 +1,8 @@
 frontend:
   replicaCount: 2
   image:
-    repository: gha-dashboard-frontend
-    tag: latest
+    repository: ghcr.io/shayd3/gha-dashboard-frontend
+    tag: v1.0.0
     pullPolicy: IfNotPresent
   service:
     port: 80
@@ -17,8 +17,8 @@ frontend:
 backend:
   replicaCount: 2
   image:
-    repository: gha-dashboard-backend
-    tag: latest
+    repository: ghcr.io/shayd3/gha-dashboard-backend
+    tag: v1.0.0
     pullPolicy: IfNotPresent
   service:
     port: 3000
