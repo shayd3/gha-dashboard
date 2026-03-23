@@ -1,5 +1,5 @@
 frontend:
-  replicaCount: 1
+  replicaCount: 2
   image:
     repository: ghcr.io/shayd3/gha-dashboard-frontend
     tag: v1.0.0
@@ -15,7 +15,7 @@ frontend:
       memory: 64Mi
 
 backend:
-  replicaCount: 1
+  replicaCount: 2
   image:
     repository: ghcr.io/shayd3/gha-dashboard-backend
     tag: v1.0.0
@@ -31,7 +31,7 @@ backend:
       memory: 128Mi
 
 ingress:
-  enabled: false
+  enabled: true
   className: nginx
   host: gha-dashboard.example.com
   tls:
