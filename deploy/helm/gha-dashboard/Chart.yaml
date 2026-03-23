@@ -2,5 +2,5 @@ apiVersion: v2
 name: gha-dashboard
 description: GitHub Actions Dashboard - Monitor workflow statuses across organizations
 type: application
-version: 1.0.0
-appVersion: "1.0.0"
+version: 1.0.1
+appVersion: "1.0.1"
