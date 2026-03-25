@@ -127,10 +127,34 @@ helm install gha-dashboard ./deploy/helm/gha-dashboard \
   --set github.appClientSecret=YOUR_APP_CLIENT_SECRET \
   --set jwt.secret=YOUR_JWT_SECRET \
   --set database.url='postgresql://user:pass@your-postgres-host:5432/gha_dashboard' \
+  --set ingress.enabled=true \
   --set ingress.host=gha-dashboard.your-domain.com
 ```
 
 `database.url` is stored in the Kubernetes Secret alongside other credentials. For production, use a managed PostgreSQL service (RDS, Cloud SQL, Azure Database, etc.) and set `database.url` to its connection string. If `database.url` is left empty, the backend falls back to in-memory view storage.
+
+### Deploying without an Ingress (NodePort or port-forward)
+
+When `ingress.enabled` is `false`, set `frontendUrl` explicitly so the OAuth redirect URI and CORS origin are correct:
+
+```bash
+helm install gha-dashboard ./deploy/helm/gha-dashboard \
+  --set github.appClientId=YOUR_APP_CLIENT_ID \
+  --set github.appClientSecret=YOUR_APP_CLIENT_SECRET \
+  --set jwt.secret=YOUR_JWT_SECRET \
+  --set frontend.service.type=NodePort \
+  --set frontendUrl=http://YOUR_NODE_HOSTNAME:NODE_PORT
+```
+
+`frontendUrl` defaults to the ingress host when not set. If you're on HTTP (not HTTPS), session cookies are automatically set without the `Secure` flag so they work in plain HTTP environments — `Secure` is only enabled when `frontendUrl` starts with `https://`.
+
+### Service type
+
+Both frontend and backend services default to `ClusterIP`. Override with `frontend.service.type` or `backend.service.type`:
+
+```bash
+--set frontend.service.type=NodePort
+```
 
 See `deploy/helm/gha-dashboard/values.yaml` for all configurable values (replicas, resources, TLS, GitHub Enterprise API URL, etc).
 
@@ -162,7 +186,7 @@ Users can install from the OCI registry directly:
 ```bash
 helm registry login ghcr.io
 helm install gha-dashboard oci://ghcr.io/shayd3/charts/gha-dashboard \
-  --version 1.0.0 \
+  --version 1.0.1 \
   --set github.appClientId=YOUR_APP_CLIENT_ID \
   --set github.appClientSecret=YOUR_APP_CLIENT_SECRET \
   --set jwt.secret=YOUR_JWT_SECRET \
@@ -195,7 +219,7 @@ Cache is per-user, keyed by `userId:endpoint`.
 ## GitHub App Setup
 
 1. Go to **Settings → Developer settings → GitHub Apps → New GitHub App**
-2. Set the **Callback URL** to `http://localhost:5173/api/auth/callback` (for local dev) or your production URL
+2. Set the **Callback URL** to `http://localhost:5173/api/auth/callback` (for local dev), your production URL, or `http://YOUR_NODE:PORT/api/auth/callback` for NodePort deployments. Must exactly match the `frontendUrl` Helm value + `/api/auth/callback`.
 3. Under **Permissions**:
    - Repository: **Actions** → Read-only, **Metadata** → Read-only (auto-selected)
    - Organization: **Members** → Read-only

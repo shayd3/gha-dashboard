@@ -53,6 +53,21 @@ function mockFetchTokenFailure() {
 }
 
 /**
+ * Temporarily set FRONTEND_URL for the duration of the test callback,
+ * then restore the original value.
+ */
+async function withFrontendUrl<T>(url: string, fn: () => Promise<T>): Promise<T> {
+  const prev = process.env.FRONTEND_URL;
+  process.env.FRONTEND_URL = url;
+  try {
+    return await fn();
+  } finally {
+    if (prev === undefined) delete process.env.FRONTEND_URL;
+    else process.env.FRONTEND_URL = prev;
+  }
+}
+
+/**
  * Perform the login redirect to get a valid state cookie,
  * then return the state value and cookie header string.
  */
@@ -128,6 +143,26 @@ describe("Auth routes", () => {
       const stateCookie = cookies.find((c) => c.includes("gha_oauth_state"));
       expect(stateCookie).toBeDefined();
     });
+
+    it("sets Secure flag on OAuth state cookie when FRONTEND_URL is https", async () => {
+      await withFrontendUrl("https://example.com", async () => {
+        const res = await app.inject({ method: "GET", url: "/api/auth/login" });
+        const setCookie = res.headers["set-cookie"] as string | string[];
+        const cookies = Array.isArray(setCookie) ? setCookie : [setCookie ?? ""];
+        const stateCookie = cookies.find((c) => c.includes("gha_oauth_state"));
+        expect(stateCookie).toMatch(/;\s*Secure/i);
+      });
+    });
+
+    it("does not set Secure flag on OAuth state cookie when FRONTEND_URL is http", async () => {
+      await withFrontendUrl("http://192.168.1.10:30080", async () => {
+        const res = await app.inject({ method: "GET", url: "/api/auth/login" });
+        const setCookie = res.headers["set-cookie"] as string | string[];
+        const cookies = Array.isArray(setCookie) ? setCookie : [setCookie ?? ""];
+        const stateCookie = cookies.find((c) => c.includes("gha_oauth_state"));
+        expect(stateCookie).not.toMatch(/;\s*Secure/i);
+      });
+    });
   });
 
   // ----------------------------------------------------------------
@@ -196,6 +231,50 @@ describe("Auth routes", () => {
       const cookies = Array.isArray(setCookie) ? setCookie : [setCookie ?? ""];
       const sessionCookieSet = cookies.some((c) => c.includes("gha_session="));
       expect(sessionCookieSet).toBe(true);
+    });
+
+    it("sets Secure flag on session cookie when FRONTEND_URL is https", async () => {
+      await withFrontendUrl("https://example.com", async () => {
+        mockFetchTokenSuccess("ghp_valid", "ghr_refresh", 28800);
+        mockGetAuthenticated.mockResolvedValue({
+          data: { id: 99, login: "alice", avatar_url: "", name: "Alice" },
+        });
+
+        const { stateParam, stateCookie } = await getStateCookie(app);
+        const res = await app.inject({
+          method: "GET",
+          url: `/api/auth/callback?code=validcode&state=${stateParam}`,
+          headers: { cookie: stateCookie },
+        });
+
+        expect(res.statusCode).toBe(302);
+        const setCookie = res.headers["set-cookie"] as string | string[];
+        const cookies = Array.isArray(setCookie) ? setCookie : [setCookie ?? ""];
+        const sessionCookieHeader = cookies.find((c) => c.includes("gha_session="));
+        expect(sessionCookieHeader).toMatch(/;\s*Secure/i);
+      });
+    });
+
+    it("does not set Secure flag on session cookie when FRONTEND_URL is http", async () => {
+      await withFrontendUrl("http://192.168.1.10:30080", async () => {
+        mockFetchTokenSuccess("ghp_valid", "ghr_refresh", 28800);
+        mockGetAuthenticated.mockResolvedValue({
+          data: { id: 99, login: "alice", avatar_url: "", name: "Alice" },
+        });
+
+        const { stateParam, stateCookie } = await getStateCookie(app);
+        const res = await app.inject({
+          method: "GET",
+          url: `/api/auth/callback?code=validcode&state=${stateParam}`,
+          headers: { cookie: stateCookie },
+        });
+
+        expect(res.statusCode).toBe(302);
+        const setCookie = res.headers["set-cookie"] as string | string[];
+        const cookies = Array.isArray(setCookie) ? setCookie : [setCookie ?? ""];
+        const sessionCookieHeader = cookies.find((c) => c.includes("gha_session="));
+        expect(sessionCookieHeader).not.toMatch(/;\s*Secure/i);
+      });
     });
   });
 

@@ -2,9 +2,10 @@ frontend:
   replicaCount: 1
   image:
     repository: ghcr.io/shayd3/gha-dashboard-frontend
-    tag: v1.0.0
+    tag: v1.0.1
     pullPolicy: IfNotPresent
   service:
+    type: ClusterIP
     port: 80
   resources:
     limits:
@@ -18,9 +19,10 @@ backend:
   replicaCount: 1
   image:
     repository: ghcr.io/shayd3/gha-dashboard-backend
-    tag: v1.0.0
+    tag: v1.0.1
     pullPolicy: IfNotPresent
   service:
+    type: ClusterIP
     port: 3000
   resources:
     limits:
@@ -37,6 +39,12 @@ ingress:
   tls:
     enabled: false
     secretName: gha-dashboard-tls
+
+# Override the URL used for OAuth redirect_uri and CORS origin.
+# Defaults to the ingress host when not set.
+# Required when ingress is disabled (e.g. NodePort or port-forward).
+# Example: "http://bread-bank:31515"
+frontendUrl: ""
 
 github:
   appClientId: ""
