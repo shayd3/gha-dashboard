@@ -7,7 +7,7 @@ metadata:
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/component: frontend
 spec:
-  type: {{ .Values.frontend.service.type }}
+  type: {{ default "ClusterIP" .Values.frontend.service.type }}
   ports:
     - port: {{ .Values.frontend.service.port }}
       targetPort: 80
