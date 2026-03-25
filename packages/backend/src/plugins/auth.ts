@@ -19,6 +19,8 @@ const GITHUB_APP_CLIENT_SECRET = () =>
   process.env.GITHUB_APP_CLIENT_SECRET || "";
 const GITHUB_API_URL = () =>
   process.env.GITHUB_API_URL || "https://api.github.com";
+const SECURE_COOKIES = () =>
+  (process.env.FRONTEND_URL || "http://localhost:5173").startsWith("https://");
 
 /** Derive the base web URL from the API URL (handles GHE and github.com). */
 export function githubWebUrl(): string {
@@ -65,7 +67,7 @@ export async function verifySessionToken(
 export function setSessionCookie(reply: FastifyReply, token: string): void {
   reply.setCookie(COOKIE_NAME, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: SECURE_COOKIES(),
     sameSite: "lax",
     path: "/",
     maxAge: 8 * 60 * 60, // 8 hours
@@ -79,7 +81,7 @@ export function clearSessionCookie(reply: FastifyReply): void {
 export function setOAuthStateCookie(reply: FastifyReply, state: string): void {
   reply.setCookie(OAUTH_STATE_COOKIE, state, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: SECURE_COOKIES(),
     sameSite: "lax",
     path: "/",
     maxAge: 10 * 60, // 10 minutes

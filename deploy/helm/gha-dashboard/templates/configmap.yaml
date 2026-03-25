@@ -9,7 +9,10 @@ data:
   GITHUB_API_URL: {{ .Values.github.apiUrl | quote }}
   NODE_ENV: "production"
   PORT: {{ .Values.backend.service.port | quote }}
-  {{- if .Values.ingress.tls.enabled }}
+  {{- if .Values.frontendUrl }}
+  FRONTEND_URL: {{ .Values.frontendUrl | quote }}
+  CORS_ORIGIN: {{ .Values.frontendUrl | quote }}
+  {{- else if .Values.ingress.tls.enabled }}
   FRONTEND_URL: "https://{{ .Values.ingress.host }}"
   CORS_ORIGIN: "https://{{ .Values.ingress.host }}"
   {{- else }}
