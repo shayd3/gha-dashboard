@@ -6,11 +6,17 @@ metadata:
     app.kubernetes.io/name: {{ .Chart.Name }}
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/component: backend
+{{- if and .Values.backend.service.nodePort (ne (default "ClusterIP" .Values.backend.service.type) "NodePort") }}
+{{- fail "backend.service.nodePort is set but backend.service.type is not NodePort" }}
+{{- end }}
 spec:
   type: {{ default "ClusterIP" .Values.backend.service.type }}
   ports:
     - port: {{ .Values.backend.service.port }}
       targetPort: {{ .Values.backend.service.port }}
+      {{- if and (eq (default "ClusterIP" .Values.backend.service.type) "NodePort") .Values.backend.service.nodePort }}
+      nodePort: {{ .Values.backend.service.nodePort }}
+      {{- end }}
   selector:
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/component: backend
