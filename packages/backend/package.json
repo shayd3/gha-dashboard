@@ -17,7 +17,7 @@
     "@fastify/cors": "^10.0.2",
     "@gha-dashboard/shared": "workspace:*",
     "dotenv": "^16.4.7",
-    "fastify": "^5.8.1",
+    "fastify": "^5.8.3",
     "fastify-plugin": "^5.0.1",
     "jose": "^6.0.11",
     "octokit": "^4.1.2",
