@@ -52,13 +52,15 @@ helm install gha-dashboard oci://ghcr.io/shayd3/charts/gha-dashboard \
   --set frontendUrl=http://YOUR_NODE:31515
 ```
 
-If you omit `nodePort`, Kubernetes auto-assigns a port from the `30000–32767` range. Check the assigned port with:
+Register `http://YOUR_NODE:31515/api/auth/callback` as the callback URL in your GitHub App (substitute the port you chose for `frontend.service.nodePort`).
+
+If you omit `nodePort`, Kubernetes auto-assigns a port from the `30000–32767` range. Find the assigned port with:
 
 ```bash
 kubectl get svc gha-dashboard-frontend -n gha-dashboard
 ```
 
-Register `http://YOUR_NODE:NODE_PORT/api/auth/callback` as the callback URL in your GitHub App.
+Then register `http://YOUR_NODE:<assigned-port>/api/auth/callback` as the callback URL.
 
 ## With PostgreSQL
 
