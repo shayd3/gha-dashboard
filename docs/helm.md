@@ -47,6 +47,8 @@ helm install gha-dashboard oci://ghcr.io/shayd3/charts/gha-dashboard \
   --set jwt.secret=YOUR_JWT_SECRET \
   --set frontend.service.type=NodePort \
   --set frontend.service.nodePort=31515 \
+  --set backend.service.type=NodePort \
+  --set backend.service.nodePort=31000 \
   --set frontendUrl=http://YOUR_NODE:31515
 ```
 
