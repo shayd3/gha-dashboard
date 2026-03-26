@@ -11,7 +11,7 @@
 ```bash
 helm registry login ghcr.io
 helm install gha-dashboard oci://ghcr.io/shayd3/charts/gha-dashboard \
-  --version 1.0.1 \
+  --version 1.0.2 \
   --namespace gha-dashboard --create-namespace \
   --set github.appClientId=YOUR_CLIENT_ID \
   --set github.appClientSecret=YOUR_CLIENT_SECRET \
@@ -34,20 +34,23 @@ helm install gha-dashboard ./deploy/helm/gha-dashboard \
 
 ## Deploying Without an Ingress (NodePort)
 
-When `ingress.enabled` is `false`, set `frontendUrl` explicitly so the OAuth redirect URI and CORS origin are correct:
+When `ingress.enabled` is `false`, set `frontendUrl` explicitly so the OAuth redirect URI and CORS origin are correct.
+
+To pin stable ports (recommended — avoids random port reassignment on Service recreate):
 
 ```bash
 helm install gha-dashboard oci://ghcr.io/shayd3/charts/gha-dashboard \
-  --version 1.0.1 \
+  --version 1.0.2 \
   --namespace gha-dashboard --create-namespace \
   --set github.appClientId=YOUR_CLIENT_ID \
   --set github.appClientSecret=YOUR_CLIENT_SECRET \
   --set jwt.secret=YOUR_JWT_SECRET \
   --set frontend.service.type=NodePort \
-  --set frontendUrl=http://YOUR_NODE:NODE_PORT
+  --set frontend.service.nodePort=31515 \
+  --set frontendUrl=http://YOUR_NODE:31515
 ```
 
-Then check the assigned NodePort:
+If you omit `nodePort`, Kubernetes auto-assigns a port from the `30000–32767` range. Check the assigned port with:
 
 ```bash
 kubectl get svc gha-dashboard-frontend -n gha-dashboard
@@ -78,7 +81,9 @@ Provision the TLS secret separately (e.g. via cert-manager).
 | Value | Default | Description |
 |-------|---------|-------------|
 | `frontend.service.type` | `ClusterIP` | Service type for the frontend (`ClusterIP`, `NodePort`) |
-| `backend.service.type` | `ClusterIP` | Service type for the backend |
+| `frontend.service.nodePort` | _(unset)_ | Pin a specific NodePort for the frontend (30000–32767); auto-assigned if omitted |
+| `backend.service.type` | `ClusterIP` | Service type for the backend (`ClusterIP`, `NodePort`) |
+| `backend.service.nodePort` | _(unset)_ | Pin a specific NodePort for the backend (30000–32767); auto-assigned if omitted |
 | `frontendUrl` | _(derived from ingress host)_ | Explicit URL for OAuth redirect and CORS. Required when ingress is disabled. |
 | `ingress.enabled` | `false` | Enable nginx Ingress |
 | `ingress.host` | `gha-dashboard.example.com` | Ingress hostname |
@@ -95,7 +100,7 @@ See [`values.yaml`](../deploy/helm/gha-dashboard/values.yaml) for the full list 
 
 ```bash
 helm upgrade gha-dashboard oci://ghcr.io/shayd3/charts/gha-dashboard \
-  --version 1.0.1 \
+  --version 1.0.2 \
   --namespace gha-dashboard \
   --reuse-values
 ```

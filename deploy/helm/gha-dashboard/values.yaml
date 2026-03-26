@@ -7,6 +7,7 @@ frontend:
   service:
     type: ClusterIP
     port: 80
+    # nodePort: 31515  # Set when type is NodePort for a stable port
   resources:
     limits:
       cpu: 100m
@@ -24,6 +25,7 @@ backend:
   service:
     type: ClusterIP
     port: 3000
+    # nodePort: 31000  # Set when type is NodePort for a stable port
   resources:
     limits:
       cpu: 500m
